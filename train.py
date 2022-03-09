@@ -164,11 +164,11 @@ def Trainer(
     val_dataset = dataset["validation"]
     
     # less than n input tokens
-    path_train = "train_data_length_info.csv"
+    path_train = "datalength/train_data_length_info.csv"
     df_train = pd.read_csv(path_train)
     index_train = df_train['index'][df_train["length"] < 512]
     
-    path_val = "val_data_length_info.csv"
+    path_val = "datalength/val_data_length_info.csv"
     df_val = pd.read_csv(path_val)
     index_val = df_val['index'][df_val["length"] < 512]
     
