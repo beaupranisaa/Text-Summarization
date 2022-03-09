@@ -4,7 +4,13 @@ matplotlib
 torch
 transformers
 bert_score
-bleu_score
+# bleu_score
 datasets
 rouge
 torchmetrics
+rich
+IPython
+nltk
+sentencepiece
+absl-py
+rouge_score

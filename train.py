@@ -167,14 +167,21 @@ def Trainer(
     path_train = "datalength/train_data_length_info.csv"
     df_train = pd.read_csv(path_train)
     index_train = df_train['index'][df_train["length"] < 512]
+    # Shuffle and take only 1000 samples
+    index_train = np.random.permutation(index_train)[:10]
     
     path_val = "datalength/val_data_length_info.csv"
     df_val = pd.read_csv(path_val)
     index_val = df_val['index'][df_val["length"] < 512]
+    # Shuffle and take only 1000 samples 
+    index_val = np.random.permutation(index_val)[:10]
     
     console.print(f"FULL Dataset: {dataset.shape}")
     console.print(f"TRAIN Dataset: {train_dataset.shape}")
     console.print(f"TEST Dataset: {val_dataset.shape}\n")
+
+    console.print(f"Filtered TRAIN Dataset: {len(train_dataset[index_train]['id'])}")
+    console.print(f"Filtered TEST Dataset: {len(val_dataset[index_val]['id'])}\n")
     
     del dataset
     
@@ -247,13 +254,14 @@ def Trainer(
         predictions, actuals, ids = validate(epoch, tokenizer, model, device, val_loader)
         
         final_df = pd.DataFrame({"ids": ids, "Generated Text": predictions, "Actual Text": actuals})
-        final_df.to_csv(os.path.join(output_dir, f"""predictions_{model_params['MODEL']}_epoch{epoch}.csv"""))
+        final_df.to_csv(os.path.join(output_dir, f"""result_gen/predictions_{model_params['MODEL']}_epoch{epoch}.csv"""))
+        final_df.to_csv(os.path.join(output_dir, f"""result_eval/predictions_{model_params['MODEL']}_epoch{epoch}.csv"""))
         print("SAVE TO CSV FINISHED")
         
         rouge = compute_metrics(predictions, actuals, tokenizer)
         
         rouge_df = pd.DataFrame.from_dict(rouge, orient='index')
-        rouge_df.to_csv(os.path.join(output_dir, f"""rouge_{model_params['MODEL']}_epoch{epoch}.csv"""))
+        rouge_df.to_csv(os.path.join(output_dir, f"""result_gen/rouge_{model_params['MODEL']}_epoch{epoch}.csv"""))
         print("SAVE ROUGE TO CSV FINISHED")
         del loss, predictions, actuals, final_df, rouge, rouge_df
     

@@ -16,6 +16,7 @@ os.environ['https_proxy'] = 'http://192.41.170.23:3128'
 from torch import cuda
 device = 'cuda' if cuda.is_available() else 'cpu'
 print("configured device: ", device)
+# device = 'cpu'
 
 # Load dataset
 from datasets import load_dataset
@@ -36,8 +37,8 @@ else:
 # let's define model parameters specific to BART
 model_params = {
     "MODEL": "t5-small",  # model_type: t5-base/t5-large
-    "TRAIN_BATCH_SIZE": 16,  # training batch size
-    "VALID_BATCH_SIZE": 16,  # validation batch size
+    "TRAIN_BATCH_SIZE": 1,  # training batch size
+    "VALID_BATCH_SIZE": 1,  # validation batch size
     "TRAIN_EPOCHS": 10,  # number of training epochs
     "VAL_EPOCHS": 1,  # number of validation epochs
     "LEARNING_RATE": 2e-05,  # learning rate default betas=(0.9, 0.999), eps=1e-08
@@ -56,7 +57,7 @@ Trainer(
     source_text=source_text, 
     target_text=target_text,
     model_params=model_params,
-    output_dir=f"""./outputs_{model_params["MODEL"]}_{data}/""",
+    output_dir=f"""./model/{model_params["MODEL"]}_{data}/""",
     device = device,
     mask = False,
     to_mask_list = None
