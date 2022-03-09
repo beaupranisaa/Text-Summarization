@@ -1,0 +1,10 @@
+numpy
+pandas
+matplotlib
+torch
+transformers
+bert_score
+bleu_score
+datasets
+rouge
+torchmetrics
