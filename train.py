@@ -265,8 +265,8 @@ def Trainer(
         losses.append(loss.cpu().numpy())
         print("VALIDATE")
         # evaluating test dataset        
-        loss_val, predictions, actuals, ids = validate(epoch, tokenizer, model, device, val_loader)
-        losses_val.append(loss_val.cpu().numpy())
+        predictions, actuals, ids = validate(epoch, tokenizer, model, device, val_loader)
+#         losses_val.append(loss_val.cpu().numpy())
         
         final_df = pd.DataFrame({"ids": ids, "Generated Text": predictions, "Actual Text": actuals})
         final_df.to_csv(os.path.join(output_dir, f"""result_gen/predictions_{model_params['MODEL']}_epoch{epoch}.csv"""))
