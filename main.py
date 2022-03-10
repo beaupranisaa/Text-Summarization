@@ -37,8 +37,8 @@ else:
 # let's define model parameters specific to BART
 model_params = {
     "MODEL": "t5-small",  # model_type: t5-base/t5-large
-    "TRAIN_BATCH_SIZE": 1,  # training batch size
-    "VALID_BATCH_SIZE": 1,  # validation batch size
+    "TRAIN_BATCH_SIZE": 16,  # training batch size
+    "VALID_BATCH_SIZE": 16,  # validation batch size
     "TRAIN_EPOCHS": 10,  # number of training epochs
     "VAL_EPOCHS": 1,  # number of validation epochs
     "LEARNING_RATE": 2e-05,  # learning rate default betas=(0.9, 0.999), eps=1e-08

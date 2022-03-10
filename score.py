@@ -18,8 +18,8 @@ class Scores:
         self.model = model
         self.dataset = dataset
         
-        self.path_gen = f'{self.model}_{self.dataset}/outputs_{self.model}_{self.dataset}/results_gen'
-        self.path_eval = f'{self.model}_{self.dataset}/outputs_{self.model}_{self.dataset}/results_eval'
+#         self.path_gen = f'{self.model}_{self.dataset}/outputs_{self.model}_{self.dataset}/results_gen'
+        self.path = f'model/{self.model}_{self.dataset}/result_eval'
         
     
     def calculate(self):
@@ -46,7 +46,7 @@ class BertScore(Scores):
         for epoch in range(self.EPOCH):
             print("At: EPOCH ", epoch)
             self.bertscore_calculate = {k: [] for k in self.bertscores}
-            data_set = EvalDataset(os.path.join(self.path_gen, f"predictions_{self.model}_epoch{epoch}.csv"))
+            data_set = EvalDataset(os.path.join(self.path, f"predictions_{self.model}_epoch{epoch}.csv"))
             loader = DataLoader(data_set, ** self.params)
 #             print("DATA LOADED")
             for i,batch in enumerate(loader):
@@ -59,19 +59,19 @@ class BertScore(Scores):
             self.bertscore_calculate['recall'] = score['recall']
             self.bertscore_calculate['f1'] = score['f1']
             
-            df = pd.read_csv(os.path.join(self.path_gen, f"predictions_{self.model}_epoch{epoch}.csv"))
+            df = pd.read_csv(os.path.join(self.path, f"predictions_{self.model}_epoch{epoch}.csv"))
             
             df["BERTScore(precision)"] =  self.bertscore_calculate['precision']
             df["BERTScore(recall)"] = self.bertscore_calculate['recall']
             df["BERTScore(f1)"] = self.bertscore_calculate['f1']
             
-            df.to_csv(os.path.join(self.path_eval, f"predictions_{self.model}_epoch{epoch}.csv"), index=False)
+            df.to_csv(os.path.join(self.path, f"predictions_{self.model}_epoch{epoch}.csv"), index=False)
             
             print("SAVED TO CSV: ", epoch)
             
     def getscore(self):
         for epoch in range(self.EPOCH):
-            df = pd.read_csv(os.path.join(self.path_eval, f"predictions_{self.model}_epoch{epoch}.csv"))
+            df = pd.read_csv(os.path.join(self.path, f"predictions_{self.model}_epoch{epoch}.csv"))
 #             print(df)
             precision = np.mean(df["BERTScore(precision)"])
             recall = np.mean(df["BERTScore(recall)"])
@@ -98,11 +98,11 @@ class RougeScore(Scores):
         self.get_rouge = {k: [] for k in  self.rougescores}
         
     def calculate(self):
-        for epoch in range(13,50): #self.EPOCH
+        for epoch in range(self.EPOCH): #self.EPOCH #range(13,50)
 #         for epoch in self.EPOCH: # if list
             self.calculate_rouge = {k: [] for k in  self.rougescores}
             print("At: EPOCH ", epoch)
-            data_set = EvalDataset(os.path.join(self.path_gen, f"predictions_{self.model}_epoch{epoch}.csv"))
+            data_set = EvalDataset(os.path.join(self.path, f"predictions_{self.model}_epoch{epoch}.csv"))
             loader = DataLoader(data_set, **self.params)
             print("DATA LOADED")
             for i,batch in enumerate(loader):
@@ -120,19 +120,19 @@ class RougeScore(Scores):
 #                     print(score)
 #                     print(len(self.calculate_rouge))
 
-            df = pd.read_csv(os.path.join(self.path_eval, f"predictions_{self.model}_epoch{epoch}.csv"))
+            df = pd.read_csv(os.path.join(self.path, f"predictions_{self.model}_epoch{epoch}.csv"))
             df["RougeScore1"] = self.calculate_rouge['rouge1']
             df["RougeScore2"] = self.calculate_rouge['rouge2']
             df["RougeScoreL"] = self.calculate_rouge['rougeL'] #ROUGE-L measures the longest common subsequence (LCS) between our model output and reference. 
             df["RougeScoreLsum"] = self.calculate_rouge['rougeLsum']
             
-            df.to_csv(os.path.join(self.path_eval, f"predictions_{self.model}_epoch{epoch}.csv"), index=False)
+            df.to_csv(os.path.join(self.path, f"predictions_{self.model}_epoch{epoch}.csv"), index=False)
             print("SAVED TO CSV: ", epoch)
     
     def getscore(self):
         for epoch in range(self.EPOCH):
 #         for epoch in self.EPOCH: # if list
-            df = pd.read_csv(os.path.join(self.path_eval, f"predictions_{self.model}_epoch{epoch}.csv"))
+            df = pd.read_csv(os.path.join(self.path, f"predictions_{self.model}_epoch{epoch}.csv"))
 #             print(df)
             rouge1 = np.mean(df["RougeScore1"])
             rouge2 = np.mean(df["RougeScore2"])
@@ -149,7 +149,7 @@ class RougeScore(Scores):
         get_ave_rouge = {k: [] for k in  self.rougescores}
         for epoch in range(self.EPOCH):
 #         for epoch in self.EPOCH: # if list
-            df = pd.read_csv(os.path.join(self.path_gen, f"rouge_{self.model}_epoch{epoch}.csv"))
+            df = pd.read_csv(os.path.join(self.path, f"rouge_{self.model}_epoch{epoch}.csv"))
             get_ave_rouge["rouge1"].append(df.iloc[0,1])
             get_ave_rouge["rouge2"].append(df.iloc[1,1])
             get_ave_rouge["rougeL"].append(df.iloc[2,1])

@@ -90,14 +90,27 @@ def validate(epoch, tokenizer, model, device, loader):
 
     """
     model.eval()
+#     losses = 0
     predictions = []
     actuals = []
     sample_ids = []
     with torch.no_grad():
         for _, data in enumerate(loader, 0):
             y = data['target_ids'].to(device, dtype = torch.long)
+#             y_ids = y[:, :-1].contiguous()
+#             lm_labels = y[:, 1:].clone().detach()
+#             lm_labels[y[:, 1:] == tokenizer.pad_token_id] = -100
             ids = data['source_ids'].to(device, dtype = torch.long)
             mask = data['source_mask'].to(device, dtype = torch.long)
+            
+#             outputs = model(
+#                 input_ids=ids,
+#                 attention_mask=mask,
+#                 decoder_input_ids=y_ids,
+#                 labels=lm_labels,
+#                 )
+#             loss = outputs[0]
+#             losses += loss.detach()
             
             generated_ids = model.generate(
                   input_ids = ids,
@@ -118,7 +131,8 @@ def validate(epoch, tokenizer, model, device, loader):
             sample_ids.extend(data['ids'])
             del _, data, y, ids, mask, generated_ids, preds, target
     del loader
-    return predictions, actuals, sample_ids
+#     losses = losses/len(loader)
+    return predictions, actuals, sample_ids #losses, 
 
 def Trainer(
     dataset, source_text, target_text, model_params, output_dir="./outputs/", device = "cuda", mask = None, to_mask_list = None
@@ -130,7 +144,7 @@ def Trainer(
     """
     
     losses = []
-    
+    losses_val = []
     # Set random seeds and deterministic pytorch for reproducibility
     torch.manual_seed(model_params["SEED"])  # pytorch random seed
     np.random.seed(model_params["SEED"])  # numpy random seed
@@ -168,13 +182,13 @@ def Trainer(
     df_train = pd.read_csv(path_train)
     index_train = df_train['index'][df_train["length"] < 512]
     # Shuffle and take only 1000 samples
-    index_train = np.random.permutation(index_train)[:10]
+    index_train = np.random.permutation(index_train)[:1000]
     
     path_val = "datalength/val_data_length_info.csv"
     df_val = pd.read_csv(path_val)
     index_val = df_val['index'][df_val["length"] < 512]
     # Shuffle and take only 1000 samples 
-    index_val = np.random.permutation(index_val)[:10]
+    index_val = np.random.permutation(index_val)[:1000]
     
     console.print(f"FULL Dataset: {dataset.shape}")
     console.print(f"TRAIN Dataset: {train_dataset.shape}")
@@ -251,7 +265,8 @@ def Trainer(
         losses.append(loss.cpu().numpy())
         print("VALIDATE")
         # evaluating test dataset        
-        predictions, actuals, ids = validate(epoch, tokenizer, model, device, val_loader)
+        loss_val, predictions, actuals, ids = validate(epoch, tokenizer, model, device, val_loader)
+        losses_val.append(loss_val.cpu().numpy())
         
         final_df = pd.DataFrame({"ids": ids, "Generated Text": predictions, "Actual Text": actuals})
         final_df.to_csv(os.path.join(output_dir, f"""result_gen/predictions_{model_params['MODEL']}_epoch{epoch}.csv"""))
@@ -263,7 +278,7 @@ def Trainer(
         rouge_df = pd.DataFrame.from_dict(rouge, orient='index')
         rouge_df.to_csv(os.path.join(output_dir, f"""result_gen/rouge_{model_params['MODEL']}_epoch{epoch}.csv"""))
         print("SAVE ROUGE TO CSV FINISHED")
-        del loss, predictions, actuals, final_df, rouge, rouge_df
+        del losses_val, loss, predictions, actuals, final_df, rouge, rouge_df
     
     del training_loader, val_loader
     
@@ -276,6 +291,8 @@ def Trainer(
     # converting list to array
     arr = np.array(losses)
     np.save(os.path.join(output_dir, f"""losses_{model_params['MODEL']}_epoch{model_params['TRAIN_EPOCHS']}"""), arr)
+    arr_val = np.array(losses_val)
+    np.save(os.path.join(output_dir, f"""losses_val_{model_params['MODEL']}_epoch{model_params['VAL_EPOCHS']}"""), arr_val)
     # evaluating test dataset
 #     console.log(f"[Initiating Validation]...\n")
 #     for epoch in range(model_params["VAL_EPOCHS"]):
