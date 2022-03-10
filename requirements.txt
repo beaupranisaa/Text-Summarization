@@ -16,3 +16,4 @@ absl-py
 rouge_score
 bertviz
 # ipykernel
+ipywidgets
