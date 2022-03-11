@@ -135,7 +135,7 @@ def validate(epoch, tokenizer, model, device, loader):
     return predictions, actuals, sample_ids #losses, 
 
 def Trainer(
-    dataset, source_text, target_text, model_params, output_dir="./outputs/", device = "cuda", mask = None, to_mask_list = None
+    dataset, source_text, target_text, model_params, output_dir="./outputs/", device = "cuda", len_restriction = False, mask = None, to_mask_list = None
 ):
 
     """
@@ -177,28 +177,38 @@ def Trainer(
     train_dataset = dataset["train"]
     val_dataset = dataset["validation"]
     
-    # less than n input tokens
-    path_train = "datalength/train_data_length_info.csv"
-    df_train = pd.read_csv(path_train)
-    index_train = df_train['index'][df_train["length"] < 512]
-    # Shuffle and take only 1000 samples
-    index_train = np.random.permutation(index_train)[:1000]
-    
-    path_val = "datalength/val_data_length_info.csv"
-    df_val = pd.read_csv(path_val)
-    index_val = df_val['index'][df_val["length"] < 512]
-    # Shuffle and take only 1000 samples 
-    index_val = np.random.permutation(index_val)[:1000]
-    
     console.print(f"FULL Dataset: {dataset.shape}")
     console.print(f"TRAIN Dataset: {train_dataset.shape}")
     console.print(f"TEST Dataset: {val_dataset.shape}\n")
 
+    path_train = "datalength/train_data_length_info.csv"
+    df_train = pd.read_csv(path_train)
+    
+    path_val = "datalength/val_data_length_info.csv"
+    df_val = pd.read_csv(path_val)    
+    
+    if len_restriction == True:
+        print("LEN RESCRITION")
+        # less than n input tokens
+        index_train = df_train['index'][df_train["length"] <= 512]
+        index_val = df_val['index'][df_val["length"] <= 512]
+        
+    else:
+        print("NO LEN RESCRITION")
+        index_train = df_train['index']
+        index_val = df_val['index']
+        
+    # Shuffle and take only 1000 samples
+    index_train = np.random.permutation(index_train)[:1000]
+    index_val = np.random.permutation(index_val)[:1000]
+    
+    print(index_train)
+        
     console.print(f"Filtered TRAIN Dataset: {len(train_dataset[index_train]['id'])}")
     console.print(f"Filtered TEST Dataset: {len(val_dataset[index_val]['id'])}\n")
-    
+
     del dataset
-    
+
     # Creating the Training and Validation dataset for further creation of Dataloader
     training_set = Dataset(
         train_dataset[index_train],
@@ -222,7 +232,7 @@ def Trainer(
         target_text,
 #         train = False,
     )
-    
+
     del train_dataset, val_dataset
     
     # Defining the parameters for creation of dataloaders
@@ -268,6 +278,14 @@ def Trainer(
         predictions, actuals, ids = validate(epoch, tokenizer, model, device, val_loader)
 #         losses_val.append(loss_val.cpu().numpy())
         
+        
+        if not os.path.exists(output_dir):
+            print(f"{output_dir} CREATED!")
+            os.makedirs(output_dir)
+            os.makedirs(os.path.join(output_dir, f"""result_gen"""))
+            os.makedirs(os.path.join(output_dir, f"""result_eval"""))
+            os.makedirs(os.path.join(output_dir, f"""model_files"""))
+    
         final_df = pd.DataFrame({"ids": ids, "Generated Text": predictions, "Actual Text": actuals})
         final_df.to_csv(os.path.join(output_dir, f"""result_gen/predictions_{model_params['MODEL']}_epoch{epoch}.csv"""))
         final_df.to_csv(os.path.join(output_dir, f"""result_eval/predictions_{model_params['MODEL']}_epoch{epoch}.csv"""))
@@ -278,7 +296,7 @@ def Trainer(
         rouge_df = pd.DataFrame.from_dict(rouge, orient='index')
         rouge_df.to_csv(os.path.join(output_dir, f"""result_gen/rouge_{model_params['MODEL']}_epoch{epoch}.csv"""))
         print("SAVE ROUGE TO CSV FINISHED")
-        del losses_val, loss, predictions, actuals, final_df, rouge, rouge_df
+        del  loss, predictions, actuals, final_df, rouge, rouge_df #losses_val,
     
     del training_loader, val_loader
     

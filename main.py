@@ -45,8 +45,9 @@ Trainer(
     source_text=source_text, 
     target_text=target_text,
     model_params=model_params,
-    output_dir=f"""./model/{model_params["MODEL"]}_{data}/""",
+    output_dir=f"""./model/{model_params["MODEL"]}_{data}_nolenrestriction/""",
     device = device,
+    len_restriction = False,
     mask = False,
     to_mask_list = None
 )
