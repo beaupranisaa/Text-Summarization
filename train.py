@@ -34,7 +34,7 @@ training_logger = Table(
 )
 
 
-def train(epoch, tokenizer, model, device, loader, optimizer, scheduler):
+def train(epoch, tokenizer, model, device, loader, optimizer, scheduler, len_restriction = False):
     
     """
     Function to be called for training with the parameters passed from main function
@@ -46,8 +46,9 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler):
     for _, data in enumerate(loader, 0):
         len_check = data["source_len"] < 512
 #         len_check.sum()
-        if len_check.sum() < len(data["source_len"]):
-            print("SOSSSSSS")
+        if len_restriction == True:
+            if len_check.sum() < len(data["source_len"]):
+                print("SOSSSSSS")
         y = data["target_ids"].to(device, dtype=torch.long)
         y_ids = y[:, :-1].contiguous()
         lm_labels = y[:, 1:].clone().detach()
@@ -201,8 +202,6 @@ def Trainer(
     # Shuffle and take only 1000 samples
     index_train = np.random.permutation(index_train)[:1000]
     index_val = np.random.permutation(index_val)[:1000]
-    
-    print(index_train)
         
     console.print(f"Filtered TRAIN Dataset: {len(train_dataset[index_train]['id'])}")
     console.print(f"Filtered TEST Dataset: {len(val_dataset[index_val]['id'])}\n")
@@ -270,14 +269,13 @@ def Trainer(
 
     for epoch in range(model_params["TRAIN_EPOCHS"]):
         print("TRAIN")
-        loss = train(epoch, tokenizer, model, device, training_loader, optimizer, scheduler)
+        loss = train(epoch, tokenizer, model, device, training_loader, optimizer, scheduler,  len_restriction = len_restriction)
 #         break
         losses.append(loss.cpu().numpy())
         print("VALIDATE")
         # evaluating test dataset        
         predictions, actuals, ids = validate(epoch, tokenizer, model, device, val_loader)
 #         losses_val.append(loss_val.cpu().numpy())
-        
         
         if not os.path.exists(output_dir):
             print(f"{output_dir} CREATED!")
@@ -294,7 +292,7 @@ def Trainer(
         rouge = compute_metrics(predictions, actuals, tokenizer)
         
         rouge_df = pd.DataFrame.from_dict(rouge, orient='index')
-        rouge_df.to_csv(os.path.join(output_dir, f"""result_gen/rouge_{model_params['MODEL']}_epoch{epoch}.csv"""))
+        rouge_df.to_csv(os.path.join(output_dir, f"""result_eval/rouge_{model_params['MODEL']}_epoch{epoch}.csv"""))
         print("SAVE ROUGE TO CSV FINISHED")
         del  loss, predictions, actuals, final_df, rouge, rouge_df #losses_val,
     

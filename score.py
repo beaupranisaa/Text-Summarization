@@ -8,7 +8,7 @@ import os
 import matplotlib.pyplot as plt
 
 class Scores:
-    def __init__(self, model, dataset):
+    def __init__(self, model, dataset, path):
         self.params = {
             "batch_size": 1,
             "shuffle": False,
@@ -19,8 +19,9 @@ class Scores:
         self.dataset = dataset
         
 #         self.path_gen = f'{self.model}_{self.dataset}/outputs_{self.model}_{self.dataset}/results_gen'
-        self.path = f'model/{self.model}_{self.dataset}/result_eval'
-        
+#         self.path = f'model/{self.model}_{self.dataset}/result_eval'
+        self.path = os.path.join(path, f"result_eval")
+        print(path)
     
     def calculate(self):
         pass
@@ -32,8 +33,8 @@ class Scores:
         pass
 
 class BertScore(Scores):
-    def __init__(self, model, dataset, EPOCH):           
-        Scores.__init__(self,model, dataset)
+    def __init__(self, model, dataset, EPOCH, path):           
+        Scores.__init__(self,model, dataset, path)
         
         self.EPOCH = EPOCH
         self.metric = load_metric("bertscore")
@@ -88,8 +89,8 @@ class BertScore(Scores):
         plt.show()
 
 class RougeScore(Scores):
-    def __init__(self, model, dataset, EPOCH):           
-        Scores.__init__(self,model, dataset)
+    def __init__(self, model, dataset, EPOCH, path):           
+        Scores.__init__(self,model, dataset, path)
     
         self.EPOCH = EPOCH
         self.metric = load_metric("rouge")

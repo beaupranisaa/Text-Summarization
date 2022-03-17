@@ -16,7 +16,6 @@ os.environ['https_proxy'] = 'http://192.41.170.23:3128'
 from torch import cuda
 device = 'cuda' if cuda.is_available() else 'cpu'
 print("configured device: ", device)
-# device = 'cpu'
 
 # Load dataset
 from datasets import load_dataset
@@ -39,15 +38,17 @@ else:
 # let's define model parameters specific to BART
 model_params = model_params
 
+# let's define path
+path = path
 
 Trainer(
     dataset=dataset,
     source_text=source_text, 
     target_text=target_text,
     model_params=model_params,
-    output_dir=f"""./model/{model_params["MODEL"]}_{data}_nolenrestriction/""",
+    output_dir= path, #f"""./model/{model_params["MODEL"]}_{data}_nolenrestriction/""",
     device = device,
-    len_restriction = False,
-    mask = False,
-    to_mask_list = None
+    len_restriction = len_restriction,
+    mask = mask,
+    to_mask_list = to_mask_list
 )

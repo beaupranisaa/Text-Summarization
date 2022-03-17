@@ -17,3 +17,4 @@ rouge_score
 bertviz
 # ipykernel
 ipywidgets
+flair

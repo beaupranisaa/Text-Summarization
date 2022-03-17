@@ -1,0 +1,97 @@
+Using custom data configuration default
+Reusing dataset xsum (/home/pranisaa/.cache/huggingface/datasets/xsum/default/1.2.0/32c23220eadddb1149b16ed2e9430a05293768cfffbdfd151058697d4c11f934)
+configured device:  cuda
+  0%|                                                                                                                                                                                                                            | 0/3 [00:00<?, ?it/s] 33%|██████████████████████████████████████████████████████████████████████▋                                                                                                                                             | 1/3 [00:00<00:00,  6.91it/s]100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 3/3 [00:00<00:00, 17.07it/s][10:36:03] [Model]: Loading t5-small...                                                                                                                                                                                                     train.py:155
+                                                                                                                                                                                                                                                        
+
+Traceback (most recent call last):
+  File "main.py", line 45, in <module>
+    Trainer(
+  File "/home/pranisaa/working_dir/Text-Summarization/train.py", line 164, in Trainer
+    tokenizer = T5Tokenizer.from_pretrained(model_params["MODEL"])
+  File "/home/pranisaa/thesis/lib/python3.8/site-packages/transformers/tokenization_utils_base.py", line 1724, in from_pretrained
+    resolved_vocab_files[file_id] = cached_path(
+  File "/home/pranisaa/thesis/lib/python3.8/site-packages/transformers/file_utils.py", line 1921, in cached_path
+    output_path = get_from_cache(
+  File "/home/pranisaa/thesis/lib/python3.8/site-packages/transformers/file_utils.py", line 2124, in get_from_cache
+    r = requests.head(url, headers=headers, allow_redirects=False, proxies=proxies, timeout=etag_timeout)
+  File "/home/pranisaa/thesis/lib/python3.8/site-packages/requests/api.py", line 102, in head
+    return request('head', url, **kwargs)
+  File "/home/pranisaa/thesis/lib/python3.8/site-packages/requests/api.py", line 61, in request
+    return session.request(method=method, url=url, **kwargs)
+  File "/home/pranisaa/thesis/lib/python3.8/site-packages/requests/sessions.py", line 529, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/home/pranisaa/thesis/lib/python3.8/site-packages/requests/sessions.py", line 645, in send
+    r = adapter.send(request, **kwargs)
+  File "/home/pranisaa/thesis/lib/python3.8/site-packages/requests/adapters.py", line 440, in send
+    resp = conn.urlopen(
+  File "/home/pranisaa/thesis/lib/python3.8/site-packages/urllib3/connectionpool.py", line 700, in urlopen
+    self._prepare_proxy(conn)
+  File "/home/pranisaa/thesis/lib/python3.8/site-packages/urllib3/connectionpool.py", line 994, in _prepare_proxy
+    conn.connect()
+  File "/home/pranisaa/thesis/lib/python3.8/site-packages/urllib3/connection.py", line 371, in connect
+    self._tunnel()
+  File "/usr/lib/python3.8/http/client.py", line 897, in _tunnel
+    (version, code, message) = response._read_status()
+  File "/usr/lib/python3.8/http/client.py", line 268, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+  File "/usr/lib/python3.8/socket.py", line 669, in readinto
+    return self._sock.recv_into(b)
+KeyboardInterrupt
+Using custom data configuration default
+Reusing dataset xsum (/home/pranisaa/.cache/huggingface/datasets/xsum/default/1.2.0/32c23220eadddb1149b16ed2e9430a05293768cfffbdfd151058697d4c11f934)
+configured device:  cuda
+  0%|                                                                                                                                                                                                                            | 0/3 [00:00<?, ?it/s]100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 3/3 [00:00<00:00, 417.40it/s][10:36:19] [Model]: Loading t5-small...                                                                                                                                                                                                     train.py:155
+                                                                                                                                                                                                                                                        
+[10:36:32] [Data]: Reading data...                                                                                                                                                                                                          train.py:175
+                                                                                                                                                                                                                                                        
+FULL Dataset: {'train': (204045, 3), 'validation': (11332, 3), 'test': (11334, 3)}
+TRAIN Dataset: (204045, 3)
+TEST Dataset: (11332, 3)
+
+NO LEN RESCRITION
+Filtered TRAIN Dataset: 1000
+Filtered TEST Dataset: 1000
+
+TRAIN LOADER:  63
+VAL LOADER:  63
+[10:36:33] [Initiating Fine Tuning]...                                                                                                                                                                                                      train.py:268
+                                                                                                                                                                                                                                                        
+
+Token indices sequence length is longer than the specified maximum sequence length for this model (568 > 512). Running this sequence through the model will result in indexing errors
+TRAIN
+STEP:  0 / 63
+                               Training Status                               
++---------------------------------------------------------------------------+
+|Epoch | Steps |                            Loss                            |
+|------+-------+------------------------------------------------------------|
+|  0   | 0/63  | tensor(5.2885, device='cuda:0', grad_fn=<NllLossBackward0>)|
++---------------------------------------------------------------------------+
+[2KUsing custom data configuration default
+Reusing dataset xsum (/home/pranisaa/.cache/huggingface/datasets/xsum/default/1.2.0/32c23220eadddb1149b16ed2e9430a05293768cfffbdfd151058697d4c11f934)
+configured device:  cuda
+  0%|                                                                                                                                                                                                              | 0/3 [00:00<?, ?it/s]100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 3/3 [00:00<00:00, 438.80it/s][11:52:59] [Model]: Loading t5-small...                                                                                                                                                                                       train.py:155
+                                                                                                                                                                                                                                          
+[11:53:12] [Data]: Reading data...                                                                                                                                                                                            train.py:175
+                                                                                                                                                                                                                                          
+FULL Dataset: {'train': (204045, 3), 'validation': (11332, 3), 'test': (11334, 3)}
+TRAIN Dataset: (204045, 3)
+TEST Dataset: (11332, 3)
+
+LEN RESCRITION
+Filtered TRAIN Dataset: 1000
+Filtered TEST Dataset: 1000
+
+TRAIN LOADER:  63
+VAL LOADER:  63
+           [Initiating Fine Tuning]...                                                                                                                                                                                        train.py:268
+                                                                                                                                                                                                                                          
+TRAIN
+STEP:  0 / 63
+                               Training Status                               
++---------------------------------------------------------------------------+
+|Epoch | Steps |                            Loss                            |
+|------+-------+------------------------------------------------------------|
+|  0   | 0/63  | tensor(5.4401, device='cuda:0', grad_fn=<NllLossBackward0>)|
++---------------------------------------------------------------------------+
+[2K
