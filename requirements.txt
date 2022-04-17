@@ -18,3 +18,6 @@ bertviz
 # ipykernel
 ipywidgets
 flair
+seaborn
+spacy
+pyLDAvis

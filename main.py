@@ -22,6 +22,8 @@ from datasets import load_dataset
 
 from config import *
 
+print(model_params)
+
 data = data
 
 if data == 'cnn_dailymail':

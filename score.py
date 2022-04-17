@@ -116,11 +116,6 @@ class RougeScore(Scores):
                 self.calculate_rouge['rougeLsum'].append(score['rougeLsum'])
                 if i % 100 == 0:
                     print("STEP: ", i, "/", len(loader))
-#                     print("REF: ", ref)
-#                     print("HYP: ", hyp)
-#                     print(score)
-#                     print(len(self.calculate_rouge))
-
             df = pd.read_csv(os.path.join(self.path, f"predictions_{self.model}_epoch{epoch}.csv"))
             df["RougeScore1"] = self.calculate_rouge['rouge1']
             df["RougeScore2"] = self.calculate_rouge['rouge2']
@@ -151,12 +146,13 @@ class RougeScore(Scores):
         for epoch in range(self.EPOCH):
 #         for epoch in self.EPOCH: # if list
             df = pd.read_csv(os.path.join(self.path, f"rouge_{self.model}_epoch{epoch}.csv"))
+            
             get_ave_rouge["rouge1"].append(df.iloc[0,1])
             get_ave_rouge["rouge2"].append(df.iloc[1,1])
             get_ave_rouge["rougeL"].append(df.iloc[2,1])
             get_ave_rouge["rougeLsum"].append(df.iloc[3,1])
         
-        return get_ave_rouge
+        return get_ave_rouge   
     
     def plot(self, toplot, label):
         plt.plot(toplot, label = label)

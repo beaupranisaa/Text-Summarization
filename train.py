@@ -16,7 +16,7 @@ from rich.console import Console
 from IPython.display import clear_output
 
 # Importing the T5 modules from huggingface/transformers
-from transformers import PegasusTokenizer, PegasusForConditionalGeneration, T5Tokenizer, T5ForConditionalGeneration, BartTokenizer, BartForConditionalGeneration
+from transformers import PegasusTokenizer, PegasusForConditionalGeneration, T5Tokenizer, T5ForConditionalGeneration, BartTokenizer, BartForConditionalGeneration, LEDTokenizer, LEDForConditionalGeneration
 
 import nltk
 
@@ -44,7 +44,10 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler, len_res
     model.train()
     losses = 0
     for _, data in enumerate(loader, 0):
-        len_check = data["source_len"] < 512
+        len_check1 = data["source_len"] <= 512 
+        len_check2 = data["source_len"] >= 485
+        len_check3 = data["target_len"] <= 36
+        len_check = len_check1 & len_check2 & len_check3
 #         len_check.sum()
         if len_restriction == True:
             if len_check.sum() < len(data["source_len"]):
@@ -92,48 +95,42 @@ def validate(epoch, tokenizer, model, device, loader):
     """
     model.eval()
 #     losses = 0
-    predictions = []
-    actuals = []
-    sample_ids = []
+    results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Reference summary": [], "Generated summary": [], "Document length": [], "Reference length": [], "Generated length": [] }
     with torch.no_grad():
         for _, data in enumerate(loader, 0):
             y = data['target_ids'].to(device, dtype = torch.long)
-#             y_ids = y[:, :-1].contiguous()
-#             lm_labels = y[:, 1:].clone().detach()
-#             lm_labels[y[:, 1:] == tokenizer.pad_token_id] = -100
             ids = data['source_ids'].to(device, dtype = torch.long)
             mask = data['source_mask'].to(device, dtype = torch.long)
-            
-#             outputs = model(
-#                 input_ids=ids,
-#                 attention_mask=mask,
-#                 decoder_input_ids=y_ids,
-#                 labels=lm_labels,
-#                 )
-#             loss = outputs[0]
-#             losses += loss.detach()
-            
+
             generated_ids = model.generate(
                   input_ids = ids,
                   attention_mask = mask, 
-                  max_length=150, 
+                  max_length = 36, 
                   num_beams=2,
                   repetition_penalty=2.5, 
                   length_penalty=1.0, 
                   early_stopping=True
                   )
+             
             preds = [tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=True) for g in generated_ids]
             target = [tokenizer.decode(t, skip_special_tokens=True, clean_up_tokenization_spaces=True)for t in y]
+
+            preds_len = [len(tokenizer.batch_encode_plus([p],return_tensors="pt")["input_ids"].squeeze()) for p in preds]
+            
             if _ % 1000==0:
                 console.print(f'Completed {_}')
+                
+            results['Sample ids'].extend(data['ids'])
+            results['Document'].extend(data['source_text'])
+            results['Shortened Document'].extend(data['shortened_source_text'])
+            results['Reference summary'].extend(target)
+            results['Generated summary'].extend(preds)
+            results['Document length'].extend(data['source_len'].tolist())
+            results['Reference length'].extend(data['target_len'].tolist())
+            results['Generated length'].extend(preds_len)
 
-            predictions.extend(preds)
-            actuals.extend(target)
-            sample_ids.extend(data['ids'])
-            del _, data, y, ids, mask, generated_ids, preds, target
     del loader
-#     losses = losses/len(loader)
-    return predictions, actuals, sample_ids #losses, 
+    return results
 
 def Trainer(
     dataset, source_text, target_text, model_params, output_dir="./outputs/", device = "cuda", len_restriction = False, mask = None, to_mask_list = None
@@ -166,45 +163,61 @@ def Trainer(
     elif "pegasus" in model_params["MODEL"]:
         tokenizer = PegasusTokenizer.from_pretrained(f'google/{model_params["MODEL"]}')
         model = PegasusForConditionalGeneration.from_pretrained(f'google/{model_params["MODEL"]}')
+    elif "longformer" in model_params["MODEL"]:
+        tokenizer = LEDTokenizer.from_pretrained(f'allenai/{model_params["MODEL"]}') #longformer-base-4096
+        model = LEDForConditionalGeneration.from_pretrained(f'allenai/{model_params["MODEL"]}')        
     else:
         raise ValueError("Undefined model")
         
     model = model.to(device)
-
+    print(model)
     # logging
     console.log(f"[Data]: Reading data...\n")
 
     # Creation of Dataset and Dataloader
     train_dataset = dataset["train"]
     val_dataset = dataset["validation"]
+    test_dataset = dataset["test"]
     
     console.print(f"FULL Dataset: {dataset.shape}")
     console.print(f"TRAIN Dataset: {train_dataset.shape}")
     console.print(f"TEST Dataset: {val_dataset.shape}\n")
 
-    path_train = "datalength/train_data_length_info.csv"
+    path_train = "datalength/train_info.csv"
     df_train = pd.read_csv(path_train)
     
-    path_val = "datalength/val_data_length_info.csv"
-    df_val = pd.read_csv(path_val)    
+    path_test = "datalength/test_info.csv"
+    df_test = pd.read_csv(path_test)    
     
     if len_restriction == True:
-        print("LEN RESCRITION")
+        print("LEN RESTRICTION")
         # less than n input tokens
-        index_train = df_train['index'][df_train["length"] <= 512]
-        index_val = df_val['index'][df_val["length"] <= 512]
+        
+        traincond1 = df_train["doc len"] >= 485
+        traincond2 = df_train["doc len"] <= 512
+        traincond3 = df_train["sum len"] <= 36
+        
+        testcond1 = df_test["doc len"] >= 485
+        testcond2 = df_test["doc len"] <= 512
+        testcond3 = df_test["sum len"] <= 36
+        
+        index_train = df_train['index'][traincond1 & traincond2 & traincond3]
+        index_test = df_test['index'][testcond1 & testcond2 & testcond3]
+        print(len(index_train))
+        print(len(index_test))
         
     else:
-        print("NO LEN RESCRITION")
+        print("NO LEN RESTRICTION")
         index_train = df_train['index']
-        index_val = df_val['index']
+        index_test = df_test['index']
         
     # Shuffle and take only 1000 samples
-    index_train = np.random.permutation(index_train)[:1000]
-    index_val = np.random.permutation(index_val)[:1000]
+    index_train = np.random.permutation(index_train)
+    index_test = np.random.permutation(index_test)
+#     print(index_train)
         
     console.print(f"Filtered TRAIN Dataset: {len(train_dataset[index_train]['id'])}")
-    console.print(f"Filtered TEST Dataset: {len(val_dataset[index_val]['id'])}\n")
+    console.print(f"Filtered TEST Dataset: {len(test_dataset[index_test]['id'])}\n")
 
     del dataset
 
@@ -219,29 +232,27 @@ def Trainer(
         target_text,
         mask = mask,
         to_mask_list = to_mask_list,
-#         train = True,
     )
-    val_set = Dataset(
-        val_dataset[index_val],
+    test_set = Dataset(
+        test_dataset[index_test],
         tokenizer,
         model_params["MODEL"],
         model_params["MAX_SOURCE_TEXT_LENGTH"],
         model_params["MAX_TARGET_TEXT_LENGTH"],
         source_text,
         target_text,
-#         train = False,
     )
 
-    del train_dataset, val_dataset
+    del train_dataset, test_dataset
     
     # Defining the parameters for creation of dataloaders
     train_params = {
         "batch_size": model_params["TRAIN_BATCH_SIZE"],
-        "shuffle": True,
+        "shuffle": False,
         "num_workers": 0,
     }
 
-    val_params = {
+    test_params = {
         "batch_size": model_params["VALID_BATCH_SIZE"],
         "shuffle": False,
         "num_workers": 0,
@@ -249,12 +260,12 @@ def Trainer(
 
     # Creation of Dataloaders for testing and validation. This will be used down for training and validation stage for the model.
     training_loader = DataLoader(training_set, **train_params)
-    val_loader = DataLoader(val_set, **val_params)
+    test_loader = DataLoader(test_set, **test_params)
     
     print("TRAIN LOADER: ", len(training_loader))
-    print("VAL LOADER: ", len(val_loader))
+    print("VAL LOADER: ", len(test_loader))
     
-    del train_params, val_params
+    del train_params, test_params
     
     # Defining the optimizer that will be used to tune the weights of the network in the training session.
     optimizer = torch.optim.Adam(
@@ -274,7 +285,7 @@ def Trainer(
         losses.append(loss.cpu().numpy())
         print("VALIDATE")
         # evaluating test dataset        
-        predictions, actuals, ids = validate(epoch, tokenizer, model, device, val_loader)
+        results = validate(epoch, tokenizer, model, device, test_loader)
 #         losses_val.append(loss_val.cpu().numpy())
         
         if not os.path.exists(output_dir):
@@ -283,20 +294,22 @@ def Trainer(
             os.makedirs(os.path.join(output_dir, f"""result_gen"""))
             os.makedirs(os.path.join(output_dir, f"""result_eval"""))
             os.makedirs(os.path.join(output_dir, f"""model_files"""))
-    
-        final_df = pd.DataFrame({"ids": ids, "Generated Text": predictions, "Actual Text": actuals})
+        
+#         final_df = pd.DataFrame({"ids": ids, "Document": documents, "Generated Text": predictions, "Actual Text": actuals, "Document length": document_lens, "Actual length": actuals_lens })
+        
+        final_df = pd.DataFrame(results)
         final_df.to_csv(os.path.join(output_dir, f"""result_gen/predictions_{model_params['MODEL']}_epoch{epoch}.csv"""))
         final_df.to_csv(os.path.join(output_dir, f"""result_eval/predictions_{model_params['MODEL']}_epoch{epoch}.csv"""))
         print("SAVE TO CSV FINISHED")
         
-        rouge = compute_metrics(predictions, actuals, tokenizer)
+        rouge = compute_metrics(results["Generated summary"], results["Reference summary"], tokenizer)
         
         rouge_df = pd.DataFrame.from_dict(rouge, orient='index')
         rouge_df.to_csv(os.path.join(output_dir, f"""result_eval/rouge_{model_params['MODEL']}_epoch{epoch}.csv"""))
         print("SAVE ROUGE TO CSV FINISHED")
-        del  loss, predictions, actuals, final_df, rouge, rouge_df #losses_val,
+#         del  loss, predictions, actuals, final_df, rouge, rouge_df #losses_val,
     
-    del training_loader, val_loader
+    del training_loader, test_loader
     
     console.log(f"[Saving Model]...\n")
     # Saving the model after training
@@ -309,18 +322,6 @@ def Trainer(
     np.save(os.path.join(output_dir, f"""losses_{model_params['MODEL']}_epoch{model_params['TRAIN_EPOCHS']}"""), arr)
     arr_val = np.array(losses_val)
     np.save(os.path.join(output_dir, f"""losses_val_{model_params['MODEL']}_epoch{model_params['VAL_EPOCHS']}"""), arr_val)
-    # evaluating test dataset
-#     console.log(f"[Initiating Validation]...\n")
-#     for epoch in range(model_params["VAL_EPOCHS"]):
-#         predictions, actuals = validate(epoch, tokenizer, model, device, val_loader)
-        
-#         final_df = pd.DataFrame({"Generated Text": predictions, "Actual Text": actuals})
-#         final_df.to_csv(os.path.join(output_dir, f"""predictions_{model_params['MODEL']}_epoch{model_params['TRAIN_EPOCHS']}.csv"""))
-        
-#         rouge = compute_metrics(predictions, actuals, tokenizer)
-        
-#         rouge_df = pd.DataFrame.from_dict(rouge, orient='index')
-#         rouge_df.to_csv(os.path.join(output_dir, f"""rouge_{model_params['MODEL']}_epoch{model_params['TRAIN_EPOCHS']}.csv"""))
 
     console.save_text(os.path.join(output_dir, "logs.txt"))
 

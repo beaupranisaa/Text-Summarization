@@ -128,3 +128,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 model/*
+datalength/test_info.csv
+datalength/val_info.csv
+datalength/train_info.csv

@@ -2,6 +2,7 @@
 from torch.utils.data import Dataset
 import torch
 import pandas as pd
+from tokenizers import decoders
 
 class Dataset(Dataset):
     """u
@@ -17,7 +18,7 @@ class Dataset(Dataset):
         """
         Initializes a Dataset class
 
-        Args:yo
+        Args:
             dataframe (pandas.DataFrame): Input dataframe
             tokenizer (transformers.tokenizer): Transformers tokenizer
             source_len (int): Max length of source text
@@ -29,7 +30,6 @@ class Dataset(Dataset):
         self.data = dataframe
         self.source_len = source_len
         self.summ_len = target_len
-#         train_texts, train_labels = dataset['train']['document'][:1000], dataset['train']['summary'][:1000]
         self.mask = mask
         self.to_mask_list = to_mask_list
         self.source_text = self.data[source_text]
@@ -61,7 +61,7 @@ class Dataset(Dataset):
 
         source = self.tokenizer.batch_encode_plus(
             [source_text],
-            max_length=self.source_len,
+            max_length = 512, #self.source_len
             pad_to_max_length=True,
             truncation=True,
             padding="max_length",
@@ -79,19 +79,52 @@ class Dataset(Dataset):
             [source_text],
             return_tensors="pt",
         )
-
-        len_source = len(source_len["input_ids"].squeeze())
+        
+        target_len = self.tokenizer.batch_encode_plus(
+            [target_text],
+            return_tensors="pt",
+        )
+        
         source_ids = source["input_ids"].squeeze()
         source_mask = source["attention_mask"].squeeze()
         target_ids = target["input_ids"].squeeze()
-        target_mask = target["attention_mask"].squeeze()
+        target_mask = target["attention_mask"].squeeze()        
+        
+        # get end token
+        end_eos = int(torch.where(source_ids == 1)[0])
+        
+        # tail-only
+#         source_ids_short = source_ids[end_eos-self.source_len+1:end_eos+1]
+#         source_ids = source_ids_short
+#         source_ids[0], source_ids[1] = 21603, 10  # 21603, 10 = summarize, :      
+#         source_mask = source_mask[end_eos-self.source_len+1:end_eos+1]
+        
+        # Head+tail
+        head_ids, head_mask = source_ids[0:self.source_len//2+1], source_mask[0:self.source_len//2+1]
+        tail_ids, tail_mask= source_ids[end_eos-(self.source_len//2)+1:end_eos+1], source_mask[end_eos-(self.source_len//2)+1:end_eos+1]
+        source_ids_short = torch.cat((head_ids, tail_ids),0)
+        source_ids = source_ids_short
+        source_mask = torch.cat((head_mask, tail_mask),0)
+
+        # padding
+        diff = 512 - len(source_ids)
+        pad = torch.zeros(diff)
+        source_ids = torch.cat((source_ids, pad), 0)
+        source_mask = torch.cat((source_mask, pad), 0)
+
+        tokenizer = decoders.WordPiece()
+        source_ids_short = self.tokenizer.decode(source_ids_short)
 
         return {
+            "source_text": source_text,
+            "shortened_source_text": source_ids_short,
             "source_ids": source_ids.to(dtype=torch.long),
             "source_mask": source_mask.to(dtype=torch.long),
+            "source_len": len(source_len["input_ids"].squeeze()),
+            "target_text": target_text,
             "target_ids": target_ids.to(dtype=torch.long),
             "target_ids_y": target_ids.to(dtype=torch.long),
-            "source_len": len(source_len["input_ids"].squeeze()),
+            "target_len": len(target_len["input_ids"].squeeze()),
             "ids": ids,
         }
     
@@ -108,8 +141,8 @@ class EvalDataset(Dataset):
     def __init__(self, path):
         #read csv file and load row data into variable
         file_out = df = pd.read_csv(path)
-        self.ref = file_out['Actual Text']
-        self.hyp = file_out['Generated Text']
+        self.ref = file_out['Reference summary']
+        self.hyp = file_out['Generated summary']
         
     def __len__(self):
         return len(self.hyp)
