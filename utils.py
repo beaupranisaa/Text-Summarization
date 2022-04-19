@@ -22,3 +22,21 @@ def display_dataset(ds):
         table.add_row(row[0], row[1])
 
     console.print(table)
+    
+def checker(model_params):
+    assert model_params["SHORTENING QUANTITY"] in [0, 25, 35, 45]
+    assert model_params["MAX_SOURCE_TEXT_LENGTH"] in [512, 373, 323, 273]
+    assert model_params["MAX_SOURCE_TEXT_LENGTH"] in ["full-text", "head-only", "tail-only",]+["head+tail_ratio{:.1f}".format(i) for i in np.arange(0.0, 1.0, 0.1)]
+
+    if model_params["METHOD"] == "full-text":
+        assert model_params["SHORTENING QUANTITY"] == 0
+        assert model_params["MAX_SOURCE_TEXT_LENGTH"] == 512
+
+    if model_params["SHORTENING QUANTITY"] == 25:
+        assert model_params["MAX_SOURCE_TEXT_LENGTH"] == 373
+    elif model_params["SHORTENING QUANTITY"] == 35:
+        assert model_params["MAX_SOURCE_TEXT_LENGTH"] == 323
+    elif model_params["SHORTENING QUANTITY"] == 45:
+        assert model_params["MAX_SOURCE_TEXT_LENGTH"] == 273
+    else:
+        pass

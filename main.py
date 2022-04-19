@@ -8,24 +8,23 @@ from torch.utils.data import Dataset, DataLoader, RandomSampler, SequentialSampl
 import os
 import pickle
 from train import Trainer
-
+from utils import checker
+from torch import cuda
 import os
+from datasets import load_dataset
+from config import *
+
 os.environ['http_proxy'] = 'http://192.41.170.23:3128'
 os.environ['https_proxy'] = 'http://192.41.170.23:3128'
 
-from torch import cuda
 device = 'cuda' if cuda.is_available() else 'cpu'
 print("configured device: ", device)
 
-# Load dataset
-from datasets import load_dataset
-
-from config import *
-
 print(model_params)
 
-data = data
+checker(model_params)
 
+data = data
 if data == 'cnn_dailymail':
     dataset = load_dataset(data, '3.0.0')
     source_text = "article"
