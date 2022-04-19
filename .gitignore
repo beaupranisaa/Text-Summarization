@@ -131,3 +131,5 @@ model/*
 datalength/test_info.csv
 datalength/val_info.csv
 datalength/train_info.csv
+nohup.out
+nohup2.out

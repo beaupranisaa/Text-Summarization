@@ -43,6 +43,10 @@ model_params = model_params
 # let's define path
 path = path
 
+import time 
+
+start_time = time.time()
+
 Trainer(
     dataset=dataset,
     source_text=source_text, 
@@ -54,3 +58,5 @@ Trainer(
     mask = mask,
     to_mask_list = to_mask_list
 )
+
+print("--- %s seconds ---" % (time.time() - start_time)) #9642 seconds

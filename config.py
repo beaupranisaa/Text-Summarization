@@ -8,13 +8,28 @@ model_params = {
     "VAL_EPOCHS": 1,  # number of validation epochs
     "LEARNING_RATE": 2e-05,  # learning rate default betas=(0.9, 0.999), eps=1e-08
     "SCHEDULER": "linear",
-    "MAX_SOURCE_TEXT_LENGTH": 323,  # max length of source text 25% 373/ 35% 323/ 45% 273
+    "SHORTENING QUANTITY": 0,
+    "MAX_SOURCE_TEXT_LENGTH": 512,  # max length of source text 25% 373/ 35% 323/ 45% 273
     "MAX_TARGET_TEXT_LENGTH": 36,  # max length of target text
     "SEED": 42,  # set seed for reproducibility
+    "METHOD": "full-text", # full-text, head-only, tail-only, head+tail_ratio0.2, head+tail_ratio0.5
 }
 
+if model_params["METHOD"] == "full-text":
+    assert model_params["SHORTENING QUANTITY"] == 0
+    assert model_params["MAX_SOURCE_TEXT_LENGTH"] == 512
+
+if model_params["SHORTENING QUANTITY"] == 25:
+    assert model_params["MAX_SOURCE_TEXT_LENGTH"] == 373
+elif model_params["SHORTENING QUANTITY"] == 35:
+    assert model_params["MAX_SOURCE_TEXT_LENGTH"] == 323
+elif model_params["SHORTENING QUANTITY"] == 45:
+    assert model_params["MAX_SOURCE_TEXT_LENGTH"] == 273
+else:
+    pass
+    
 # path = f"""./model/{model_params["MODEL"]}_{data}_nolenrestriction/"""
-path = f"""./model/{model_params["MODEL"]}_{data}_head+tail35_50epochs_ratio5050/"""
+path = f"""./model/{model_params["MODEL"]}_{data}_{model_params["METHOD"]}_{model_params["SHORTENING QUANTITY"]}_{model_params["TRAIN_EPOCHS"]}epochs/"""
 
 len_restriction = True
 mask = False

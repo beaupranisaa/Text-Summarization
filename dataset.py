@@ -1,8 +1,11 @@
 # from transformers import T5Tokenizer,
+import math
 from torch.utils.data import Dataset
 import torch
 import pandas as pd
 from tokenizers import decoders
+import re
+from strategy import *
 
 class Dataset(Dataset):
     """u
@@ -13,7 +16,7 @@ class Dataset(Dataset):
     """
 
     def __init__(
-        self, dataframe, tokenizer, model_name, source_len, target_len, source_text, target_text, to_mask_list = None,  mask = False,#train = True,
+        self, dataframe, tokenizer, model_name, max_source_len, target_len, source_text, target_text, method = "full-text", to_mask_list = None,  mask = False, 
     ):
         """
         Initializes a Dataset class
@@ -28,14 +31,15 @@ class Dataset(Dataset):
         """
         self.tokenizer = tokenizer
         self.data = dataframe
-        self.source_len = source_len
+        self.max_source_len = max_source_len
         self.summ_len = target_len
         self.mask = mask
         self.to_mask_list = to_mask_list
-        self.source_text = self.data[source_text]
+        self.method = method
+        self.source_text = self.data[source_text] 
         if "t5" in model_name:
             self.source_text = self.add_prefix(self.source_text)
-        self.target_text = self.data[target_text]
+        self.target_text = self.data[target_text] 
         
         self.ids = self.data['id']
 
@@ -61,12 +65,13 @@ class Dataset(Dataset):
 
         source = self.tokenizer.batch_encode_plus(
             [source_text],
-            max_length = 512, #self.source_len
+            max_length = 512, #self.max_source_len
             pad_to_max_length=True,
             truncation=True,
             padding="max_length",
             return_tensors="pt",
         )
+
         target = self.tokenizer.batch_encode_plus(
             [target_text],
             max_length=self.summ_len,
@@ -89,30 +94,10 @@ class Dataset(Dataset):
         source_mask = source["attention_mask"].squeeze()
         target_ids = target["input_ids"].squeeze()
         target_mask = target["attention_mask"].squeeze()        
-        
-        # get end token
-        end_eos = int(torch.where(source_ids == 1)[0])
-        
-        # tail-only
-#         source_ids_short = source_ids[end_eos-self.source_len+1:end_eos+1]
-#         source_ids = source_ids_short
-#         source_ids[0], source_ids[1] = 21603, 10  # 21603, 10 = summarize, :      
-#         source_mask = source_mask[end_eos-self.source_len+1:end_eos+1]
-        
-        # Head+tail
-        head_ids, head_mask = source_ids[0:self.source_len//2+1], source_mask[0:self.source_len//2+1]
-        tail_ids, tail_mask= source_ids[end_eos-(self.source_len//2)+1:end_eos+1], source_mask[end_eos-(self.source_len//2)+1:end_eos+1]
-        source_ids_short = torch.cat((head_ids, tail_ids),0)
-        source_ids = source_ids_short
-        source_mask = torch.cat((head_mask, tail_mask),0)
 
-        # padding
-        diff = 512 - len(source_ids)
-        pad = torch.zeros(diff)
-        source_ids = torch.cat((source_ids, pad), 0)
-        source_mask = torch.cat((source_mask, pad), 0)
-
-        tokenizer = decoders.WordPiece()
+        strategy = Strategy(source_ids, source_mask, source_len, self.max_source_len)
+        source_ids, source_ids_short, source_mask  = strategy.shorten(self.method)
+        
         source_ids_short = self.tokenizer.decode(source_ids_short)
 
         return {
@@ -135,11 +120,13 @@ class Dataset(Dataset):
     
     def count_words(self):
         pass
-
+    
+    
 class EvalDataset(Dataset):
     
     def __init__(self, path):
         #read csv file and load row data into variable
+        print("EVAL",path)
         file_out = df = pd.read_csv(path)
         self.ref = file_out['Reference summary']
         self.hyp = file_out['Generated summary']

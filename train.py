@@ -95,7 +95,7 @@ def validate(epoch, tokenizer, model, device, loader):
     """
     model.eval()
 #     losses = 0
-    results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Reference summary": [], "Generated summary": [], "Document length": [], "Reference length": [], "Generated length": [] }
+    results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Reference summary": [], "Generated summary": [], "Document length": [], "Reference length": [], "Generated length": [] } 
     with torch.no_grad():
         for _, data in enumerate(loader, 0):
             y = data['target_ids'].to(device, dtype = torch.long)
@@ -170,7 +170,7 @@ def Trainer(
         raise ValueError("Undefined model")
         
     model = model.to(device)
-    print(model)
+
     # logging
     console.log(f"[Data]: Reading data...\n")
 
@@ -230,6 +230,7 @@ def Trainer(
         model_params["MAX_TARGET_TEXT_LENGTH"],
         source_text,
         target_text,
+        model_params["METHOD"],
         mask = mask,
         to_mask_list = to_mask_list,
     )
@@ -241,6 +242,7 @@ def Trainer(
         model_params["MAX_TARGET_TEXT_LENGTH"],
         source_text,
         target_text,
+        model_params["METHOD"]
     )
 
     del train_dataset, test_dataset
