@@ -8,7 +8,6 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import os
 from datasets import load_metric
-from utils import *
 
 # rich: for a better display on terminal
 from rich.table import Column, Table
@@ -69,7 +68,7 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler, len_res
             labels=lm_labels,
         )
         loss = outputs[0]
-        if _ % 1000 == 0:
+        if _ % 10 == 0:
             print("STEP: ", _,"/",len(loader))
     # #             print("TRAINNNNNNN")
     # #             print(epoch)
@@ -134,7 +133,7 @@ def validate(epoch, tokenizer, model, device, loader):
     return results
 
 def Trainer(
-    dataset, source_text, target_text, model_params, output_dir="./outputs/", device = "cuda", len_restriction = False, mask = None, to_mask_list = None, resume_from_checkpoint = False,
+    dataset, source_text, target_text, model_params, output_dir="./outputs/", device = "cuda", len_restriction = False, mask = None, to_mask_list = None
 ):
 
     """
@@ -142,8 +141,8 @@ def Trainer(
 
     """
     
-#     losses = []
-#     losses_val = []
+    losses = []
+    losses_val = []
     # Set random seeds and deterministic pytorch for reproducibility
     torch.manual_seed(model_params["SEED"])  # pytorch random seed
     np.random.seed(model_params["SEED"])  # numpy random seed
@@ -170,20 +169,8 @@ def Trainer(
     else:
         raise ValueError("Undefined model")
         
-
-    if isinstance(resume_from_checkpoint, bool) and resume_from_checkpoint:
-        resume_checkpoint_path,resumed_epoch  = get_last_checkpoint(os.path.join(output_dir, f"""checkpoints"""))
-        model.load_state_dict(torch.load(os.path.join(resume_checkpoint_path, 'pytorch_model.bin'), map_location="cpu")) 
-        tokenizer.from_pretrained(resume_checkpoint_path)
-        model_params["START_TRAIN_EPOCHS"] = resumed_epoch
-        losses = list(np.load(os.path.join(resume_checkpoint_path, f"""losses_{model_params['MODEL']}_epoch{resumed_epoch}.npy""")))
-        print("[Model, Tokenizer]: Resuming...\n")
-    else: 
-        model_params["START_TRAIN_EPOCHS"] = 0
-        losses = []        
-        
     model = model.to(device)
-    
+
     # logging
     console.log(f"[Data]: Reading data...\n")
 
@@ -293,7 +280,7 @@ def Trainer(
     # Training loop
     console.log(f"[Initiating Fine Tuning]...\n")
 
-    for epoch in range(model_params["START_TRAIN_EPOCHS"], model_params["TRAIN_EPOCHS"]):
+    for epoch in range(model_params["TRAIN_EPOCHS"]):
         print("TRAIN")
         loss = train(epoch, tokenizer, model, device, training_loader, optimizer, scheduler,  len_restriction = len_restriction)
 #         break
@@ -308,8 +295,7 @@ def Trainer(
             os.makedirs(output_dir)
             os.makedirs(os.path.join(output_dir, f"""result_gen"""))
             os.makedirs(os.path.join(output_dir, f"""result_eval"""))
-            os.makedirs(os.path.join(output_dir, f"""checkpoints"""))
-
+            os.makedirs(os.path.join(output_dir, f"""model_files"""))
         
 #         final_df = pd.DataFrame({"ids": ids, "Document": documents, "Generated Text": predictions, "Actual Text": actuals, "Document length": document_lens, "Actual length": actuals_lens })
         
@@ -323,18 +309,22 @@ def Trainer(
         rouge_df = pd.DataFrame.from_dict(rouge, orient='index')
         rouge_df.to_csv(os.path.join(output_dir, f"""result_eval/rouge_{model_params['MODEL']}_epoch{epoch}.csv"""))
         print("SAVE ROUGE TO CSV FINISHED")
+
 #         del  loss, predictions, actuals, final_df, rouge, rouge_df #losses_val,
-        if not os.path.exists(os.path.join(output_dir, f"""checkpoints/epoch{epoch}""")):
-            os.makedirs(os.path.join(output_dir, f"""checkpoints/epoch{epoch}"""))
-        console.log(f"[Saving Model at EPOCH {epoch}]...\n")
-        # Saving the model after training
-        path = os.path.join(output_dir, f"checkpoints/epoch{epoch}")
-        model.save_pretrained(path)
-        tokenizer.save_pretrained(path)   
-        
-        # converting list to array
-        arr = np.array(losses)
-        np.save(os.path.join(output_dir, f"""checkpoints/epoch{epoch}/losses_{model_params['MODEL']}_epoch{epoch}"""), arr)
+    
+    del training_loader, test_loader
+    
+    console.log(f"[Saving Model]...\n")
+    # Saving the model after training
+    path = os.path.join(output_dir, "model_files")
+    model.save_pretrained(path)
+    tokenizer.save_pretrained(path)
+    
+    # converting list to array
+    arr = np.array(losses)
+    np.save(os.path.join(output_dir, f"""losses_{model_params['MODEL']}_epoch{model_params['TRAIN_EPOCHS']}"""), arr)
+    arr_val = np.array(losses_val)
+    np.save(os.path.join(output_dir, f"""losses_val_{model_params['MODEL']}_epoch{model_params['VAL_EPOCHS']}"""), arr_val)
 
     console.save_text(os.path.join(output_dir, "logs.txt"))
 

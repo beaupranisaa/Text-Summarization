@@ -4,8 +4,6 @@ from rich import box
 from rich.console import Console
 from IPython.display import clear_output
 import numpy as np
-import os
-import re
 
 console = Console(record=True)
 
@@ -43,18 +41,3 @@ def checker(model_params):
         assert model_params["MAX_SOURCE_TEXT_LENGTH"] == 273
     else:
         pass
-
-def get_last_checkpoint(path):
-    if not os.path.exists(path):
-        raise ValueError("No checkpoints to resume, please start training to create checkpoints...")
-    else:
-        content = os.listdir(path)
-        checkpoints = [path for path in content]
-        last_checkpoints = max([int(re.findall(r"\d*\d", cp)[0]) for cp in checkpoints if len(re.findall(r"\d*\d", cp)) != 0])   
-        print(last_checkpoints)
-        if last_checkpoints == 0:
-            raise ValueError("No checkpoints to resume, please start training to create checkpoints...")
-        else:
-            if len(checkpoints) == 0:
-                return
-            return os.path.join(path, f"epoch{last_checkpoints}"), last_checkpoints

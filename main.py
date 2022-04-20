@@ -55,7 +55,8 @@ Trainer(
     device = device,
     len_restriction = len_restriction,
     mask = mask,
-    to_mask_list = to_mask_list
+    to_mask_list = to_mask_list,
+    resume_from_checkpoint = resume_from_checkpoint,
 )
 
 print("--- %s seconds ---" % (time.time() - start_time)) #9642 seconds

@@ -37,10 +37,10 @@ class Dataset(Dataset):
         self.mask = mask
         self.to_mask_list = to_mask_list
         self.method = method
-        self.source_text = self.data[source_text]
+        self.source_text = self.data[source_text][:50]
         if "t5" in model_name:
             self.source_text = self.add_prefix(self.source_text)
-        self.target_text = self.data[target_text]
+        self.target_text = self.data[target_text][:50]
         
         self.ids = self.data['id']
 
