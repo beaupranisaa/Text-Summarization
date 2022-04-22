@@ -134,4 +134,4 @@ datalength/train_info.csv
 nohup.out
 nohup2.out
 preprocess/preprocessed_text/*
-
+oldies/*
