@@ -29,7 +29,7 @@ def display_dataset(ds):
 def checker(model_params):
     assert model_params["SHORTENING QUANTITY"] in [0, 25, 35, 45]
     assert model_params["MAX_SOURCE_TEXT_LENGTH"] in [512, 373, 323, 273]
-    assert model_params["METHOD"] in ["full-text", "head-only", "tail-only", "luhn",]+["head+tail_ratio{:.1f}".format(i) for i in np.arange(0.0, 1.0, 0.1)]
+    assert model_params["METHOD"] in ["full-text", "head-only", "tail-only", "luhn", "lsa", "textrank"]+["head+tail_ratio{:.1f}".format(i) for i in np.arange(0.0, 1.0, 0.1)]
 
     if model_params["METHOD"] == "full-text":
         assert model_params["SHORTENING QUANTITY"] == 0

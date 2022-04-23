@@ -35,7 +35,7 @@ training_logger = Table(
 )
 
 
-def train(epoch, tokenizer, model, device, loader, optimizer, scheduler, len_restriction = False):
+def train(epoch, tokenizer, model, device, loader, optimizer, scheduler, model_params):
     
     """
     Function to be called for training with the parameters passed from main function
@@ -45,14 +45,15 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler, len_res
     model.train()
     losses = 0
     for _, data in enumerate(loader, 0):
-        len_check1 = data["source_len"] <= 512 
-        len_check2 = data["source_len"] >= 485
-        len_check3 = data["target_len"] <= 36
-        len_check = len_check1 & len_check2 & len_check3
-#         len_check.sum()
-        if len_restriction == True:
-            if len_check.sum() < len(data["source_len"]):
-                print("SOSSSSSS")
+        if model_params["METHOD"] in ["full-text", "head-only", "tail-only",]+["head+tail_ratio{:.1f}".format(i) for i in np.arange(0.0, 1.0, 0.1)]:
+            len_check1 = data["source_len"] <= 512 
+            len_check2 = data["source_len"] >= 485
+            len_check3 = data["target_len"] <= 36
+            len_check = len_check1 & len_check2 & len_check3
+    #         len_check.sum()
+            if model_params["RESTRICTION"] == True:
+                if len_check.sum() < len(data["source_len"]):
+                    print("SOSSSSSS")
         y = data["target_ids"].to(device, dtype=torch.long)
         y_ids = y[:, :-1].contiguous()
         lm_labels = y[:, 1:].clone().detach()
@@ -134,7 +135,7 @@ def validate(epoch, tokenizer, model, device, loader):
     return results
 
 def Trainer(
-    dataset, source_text, target_text, model_params, output_dir="./outputs/", device = "cuda", len_restriction = False, mask = None, to_mask_list = None, resume_from_checkpoint = False,
+    dataset, source_text, target_text, model_params, output_dir="./outputs/", device = "cuda", mask = None, to_mask_list = None,
 ):
 
     """
@@ -171,7 +172,7 @@ def Trainer(
         raise ValueError("Undefined model")
         
 
-    if isinstance(resume_from_checkpoint, bool) and resume_from_checkpoint:
+    if isinstance(model_params["RESUME_FROM_CHECKPOINTS"], bool) and model_params["RESUME_FROM_CHECKPOINTS"]:
         resume_checkpoint_path,resumed_epoch  = get_last_checkpoint(os.path.join(output_dir, f"""checkpoints"""))
         model.load_state_dict(torch.load(os.path.join(resume_checkpoint_path, 'pytorch_model.bin'), map_location="cpu")) 
         tokenizer.from_pretrained(resume_checkpoint_path)
@@ -186,57 +187,68 @@ def Trainer(
     
     # logging
     console.log(f"[Data]: Reading data...\n")
+    
+    if model_params["METHOD"] in ["full-text", "head-only", "tail-only",]+["head+tail_ratio{:.1f}".format(i) for i in np.arange(0.0, 1.0, 0.1)]:
 
-    # Creation of Dataset and Dataloader
-    train_dataset = dataset["train"]
-    val_dataset = dataset["validation"]
-    test_dataset = dataset["test"]
-    
-    console.print(f"FULL Dataset: {dataset.shape}")
-    console.print(f"TRAIN Dataset: {train_dataset.shape}")
-    console.print(f"TEST Dataset: {val_dataset.shape}\n")
+        # Creation of Dataset and Dataloader
+        train_dataset = dataset["train"]
+        val_dataset = dataset["validation"]
+        test_dataset = dataset["test"]
 
-    path_train = "datalength/train_info.csv"
-    df_train = pd.read_csv(path_train)
-    
-    path_test = "datalength/test_info.csv"
-    df_test = pd.read_csv(path_test)    
-    
-    if len_restriction == True:
-        print("LEN RESTRICTION")
-        # less than n input tokens
+        console.print(f"FULL Dataset: {dataset.shape}")
+        console.print(f"TRAIN Dataset: {train_dataset.shape}")
+        console.print(f"TEST Dataset: {val_dataset.shape}\n")
+
+        path_train = "datalength/train_info.csv"
+        df_train = pd.read_csv(path_train)
+
+        path_test = "datalength/test_info.csv"
+        df_test = pd.read_csv(path_test)    
+
+        if model_params["RESTRICTION"] == True:
+            print("LEN RESTRICTION")
+            # less than n input tokens
+
+            traincond1 = df_train["doc len"] >= 485
+            traincond2 = df_train["doc len"] <= 512
+            traincond3 = df_train["sum len"] <= 36
+
+            testcond1 = df_test["doc len"] >= 485
+            testcond2 = df_test["doc len"] <= 512
+            testcond3 = df_test["sum len"] <= 36
+
+            index_train = df_train['index'][traincond1 & traincond2 & traincond3]
+            index_test = df_test['index'][testcond1 & testcond2 & testcond3]
+            print(len(index_train))
+            print(len(index_test))
+
+        else:
+            print("NO LEN RESTRICTION")
+            index_train = df_train['index']
+            index_test = df_test['index']
+
+        # Shuffle and take only 1000 samples
+        index_train = np.random.permutation(index_train)
+        index_test = np.random.permutation(index_test)
+    #     print(index_train)
+
+        console.print(f"Filtered TRAIN Dataset: {len(train_dataset[index_train]['id'])}")
+        console.print(f"Filtered TEST Dataset: {len(test_dataset[index_test]['id'])}\n")
         
-        traincond1 = df_train["doc len"] >= 485
-        traincond2 = df_train["doc len"] <= 512
-        traincond3 = df_train["sum len"] <= 36
+        train_dataset_ = train_dataset[index_train]
+        test_dataset_ = test_dataset[index_test]
+
+    elif model_params["METHOD"] in ["luhn", "lsa", "textrank"]:
+        train_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/{model_params["METHOD"]}/quantity_{model_params["SHORTENING QUANTITY"]}/train_set.csv""")
+        test_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/{model_params["METHOD"]}/quantity_{model_params["SHORTENING QUANTITY"]}/test_set.csv""")
         
-        testcond1 = df_test["doc len"] >= 485
-        testcond2 = df_test["doc len"] <= 512
-        testcond3 = df_test["sum len"] <= 36
-        
-        index_train = df_train['index'][traincond1 & traincond2 & traincond3]
-        index_test = df_test['index'][testcond1 & testcond2 & testcond3]
-        print(len(index_train))
-        print(len(index_test))
         
     else:
-        print("NO LEN RESTRICTION")
-        index_train = df_train['index']
-        index_test = df_test['index']
-        
-    # Shuffle and take only 1000 samples
-    index_train = np.random.permutation(index_train)
-    index_test = np.random.permutation(index_test)
-#     print(index_train)
-        
-    console.print(f"Filtered TRAIN Dataset: {len(train_dataset[index_train]['id'])}")
-    console.print(f"Filtered TEST Dataset: {len(test_dataset[index_test]['id'])}\n")
-
-    del dataset
+        raise ValueError("Undefined method")
 
     # Creating the Training and Validation dataset for further creation of Dataloader
     training_set = Dataset(
-        train_dataset[index_train],
+        train_dataset_,
         tokenizer,
         model_params["MODEL"],
         model_params["MAX_SOURCE_TEXT_LENGTH"],
@@ -248,7 +260,7 @@ def Trainer(
         to_mask_list = to_mask_list,
     )
     test_set = Dataset(
-        test_dataset[index_test],
+        test_dataset_,
         tokenizer,
         model_params["MODEL"],
         model_params["MAX_SOURCE_TEXT_LENGTH"],
@@ -258,7 +270,7 @@ def Trainer(
         model_params["METHOD"]
     )
 
-    del train_dataset, test_dataset
+#     del train_dataset, test_dataset
     
     # Defining the parameters for creation of dataloaders
     train_params = {
@@ -295,7 +307,7 @@ def Trainer(
 
     for epoch in range(model_params["START_TRAIN_EPOCHS"], model_params["TRAIN_EPOCHS"]):
         print("TRAIN")
-        loss = train(epoch, tokenizer, model, device, training_loader, optimizer, scheduler,  len_restriction = len_restriction)
+        loss = train(epoch, tokenizer, model, device, training_loader, optimizer, scheduler, model_params)
 #         break
         losses.append(loss.cpu().numpy())
         print("VALIDATE")

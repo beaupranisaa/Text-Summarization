@@ -6,6 +6,7 @@ import pandas as pd
 from tokenizers import decoders
 import re
 from strategy import *
+import numpy as np
 
 class Dataset(Dataset):
     """u
@@ -37,12 +38,23 @@ class Dataset(Dataset):
         self.mask = mask
         self.to_mask_list = to_mask_list
         self.method = method
-        self.source_text = self.data[source_text][:50]
+        if self.method in ["full-text", "head-only", "tail-only",]+["head+tail_ratio{:.1f}".format(i) for i in np.arange(0.0, 1.0, 0.1)]:
+            self.source_text = self.data[source_text]
+            self.target_text = self.data[target_text]
+            self.ids = self.data['id']
+        
+        elif self.method in ["luhn", "lsa", "textrank"]:
+            self.orig_text = self.data["Document"]
+            self.source_text = self.data["Shortened Document"]
+            self.target_text = list(self.data["Summary"])
+            self.ids = list(self.data['Sample ids'])
+        else:
+            pass
+        
         if "t5" in model_name:
             self.source_text = self.add_prefix(self.source_text)
-        self.target_text = self.data[target_text][:50]
         
-        self.ids = self.data['id']
+        
 
     def __len__(self):
         """returns the length of dataframe"""
