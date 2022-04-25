@@ -28,9 +28,16 @@ class Strategy:
             head_ratio = float(re.findall(r"\d*\.\d", method)[0])
             source_ids, source_ids_short, source_mask = self._get_headtail(self.source_ids, self.source_mask, self.end_eos, self.max_source_len, head_ratio)
         elif "luhn" in method:
-            source_ids, source_ids_short, source_mask = self._get_head(self.source_ids, self.source_mask, self.max_source_len)         
+            source_ids, source_ids_short, source_mask = self._get_head(self.source_ids, self.source_mask, self.max_source_len)      
+        elif "textrank" in method:
+            source_ids, source_ids_short, source_mask = self._get_head(self.source_ids, self.source_mask, self.max_source_len) 
+        elif "lsa" in method:
+            source_ids, source_ids_short, source_mask = self._get_head(self.source_ids, self.source_mask, self.max_source_len) 
+        elif "stopwords" in method:
+            source_ids, source_ids_short, source_mask = self._get_fulltext(self.source_ids, self.source_mask, self.source_len)
+            
         else:
-            pass 
+            raise ValueError("Undefined shortening strategy...") 
         
         return source_ids, source_ids_short, source_mask
         
@@ -66,19 +73,6 @@ class Strategy:
         source_ids, source_mask = self._get_padding(source_ids, source_mask)
         return source_ids, source_ids_short, source_mask
     
-#     def _get_luhn(self, source_text, source_ids, max_source_len):
-#         sentence_count = source_text.count("\n") + 1 # count number of sentences
-# #         print("orig: ", source_text)
-# #         print(source_text)
-#         token_count = torch.count_nonzero(source_ids)
-#         n_token_per_sentence = token_count/sentence_count
-#         n_sum_sentence = int(math.floor(max_source_len/n_token_per_sentence))
-#         parser = PlaintextParser.from_string(source_text[11:],Tokenizer("english")) #remove summarize: 
-#         summarizer = LuhnSummarizer()
-#         source_ids, source_ids_short, source_mask = self._get_summary(summarizer, parser, n_sum_sentence)
-#         return  source_ids, source_ids_short, source_mask
-        
-        
     def _get_padding(self, source_ids, source_mask):
         diff = 512 - len(source_ids)
         pad = torch.zeros(diff)

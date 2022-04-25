@@ -8,11 +8,11 @@ model_params = {
     "VAL_EPOCHS": 1,  # number of validation epochs
     "LEARNING_RATE": 2e-05,  # learning rate default betas=(0.9, 0.999), eps=1e-08
     "SCHEDULER": "linear",
-    "SHORTENING QUANTITY": 45,
-    "MAX_SOURCE_TEXT_LENGTH": 273,  # max length of source text 25% 373/ 35% 323/ 45% 273
+    "SHORTENING QUANTITY": 'all',
+    "MAX_SOURCE_TEXT_LENGTH": '-',  # max length of source text 25% 373/ 35% 323/ 45% 273/ 'all' '-'/ 
     "MAX_TARGET_TEXT_LENGTH": 36,  # max length of target text
     "SEED": 42,  # set seed for reproducibility
-    "METHOD": "luhn", # full-text, head-only, tail-only, head+tail_ratio0.2, head+tail_ratio0.5
+    "METHOD": "stopwords", # full-text, head-only, tail-only, head+tail_ratio0.2, head+tail_ratio0.5
     "RESTRICTION": True,
     "RESUME_FROM_CHECKPOINTS": False
 }

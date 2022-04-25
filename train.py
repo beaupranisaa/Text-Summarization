@@ -174,11 +174,12 @@ def Trainer(
 
     if isinstance(model_params["RESUME_FROM_CHECKPOINTS"], bool) and model_params["RESUME_FROM_CHECKPOINTS"]:
         resume_checkpoint_path,resumed_epoch  = get_last_checkpoint(os.path.join(output_dir, f"""checkpoints"""))
+#         print(f"""[Model, Tokenizer]: Resuming at epoch{resumed_epoch}...\n""")
         model.load_state_dict(torch.load(os.path.join(resume_checkpoint_path, 'pytorch_model.bin'), map_location="cpu")) 
         tokenizer.from_pretrained(resume_checkpoint_path)
         model_params["START_TRAIN_EPOCHS"] = resumed_epoch
         losses = list(np.load(os.path.join(resume_checkpoint_path, f"""losses_{model_params['MODEL']}_epoch{resumed_epoch}.npy""")))
-        print("[Model, Tokenizer]: Resuming...\n")
+        print(f"""[Model, Tokenizer]: Resuming at epoch{model_params["START_TRAIN_EPOCHS"]}...\n""")
     else: 
         model_params["START_TRAIN_EPOCHS"] = 0
         losses = []        
@@ -238,7 +239,7 @@ def Trainer(
         train_dataset_ = train_dataset[index_train]
         test_dataset_ = test_dataset[index_test]
 
-    elif model_params["METHOD"] in ["luhn", "lsa", "textrank"]:
+    elif model_params["METHOD"] in ["luhn", "lsa", "textrank", "stopwords"]:
         train_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/{model_params["METHOD"]}/quantity_{model_params["SHORTENING QUANTITY"]}/train_set.csv""")
         test_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/{model_params["METHOD"]}/quantity_{model_params["SHORTENING QUANTITY"]}/test_set.csv""")
         

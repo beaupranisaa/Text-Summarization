@@ -166,20 +166,27 @@ def preparedata(data, params):
 # results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Summary": [], "Document length": [] } 
 
 def process(loader, params, mode):
-    results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Summary": [], "Document length": [] } 
+    if params["METHOD"] == "stopwords":
+        results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Summary": [], "Document length": [] , "Removed words": []} 
+    else:
+        results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Summary": [], "Document length": [] } 
     for _, data in enumerate(loader, 0):
         results['Sample ids'].extend(data['ids'])
         results['Document'].extend(data['source_text'])
         results['Shortened Document'].extend(data['shortened_source_text'])
         results['Summary'].extend(data["target_text"])
         results['Document length'].extend(data['source_len'].tolist())
+        if params["METHOD"] == "stopwords":
+            results["Removed words"].extend(data['n_stopwords'].tolist())
         print("STEP: ", _,"/",len(loader))
         final_df = pd.DataFrame(results)
         if not os.path.exists(f"""preprocessed_text/{params["METHOD"]}/quantity_{params["SHORTENING QUANTITY"]}/{mode}"""):
             os.makedirs(f"""preprocessed_text/{params["METHOD"]}/quantity_{params["SHORTENING QUANTITY"]}/{mode}""")
         final_df.to_csv(f"""preprocessed_text/{params["METHOD"]}/quantity_{params["SHORTENING QUANTITY"]}/{mode}/{params["METHOD"]}_quantity{params["SHORTENING QUANTITY"]}_step{_}.csv""")
         print("SAVE TO CSV FINISHED")
-        results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Summary": [], "Document length": [] } 
+        if params["METHOD"] == "stopwords":
+            results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Summary": [], "Document length": [] , "Removed words": []} 
+        else: results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Summary": [], "Document length": [] } 
 
 if __name__ == "__main__":  
     train_loader, test_loader = preparedata(data, params)

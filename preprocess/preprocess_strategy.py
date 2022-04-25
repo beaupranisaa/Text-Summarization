@@ -8,6 +8,11 @@ from sumy.summarizers.luhn import LuhnSummarizer
 from sumy.summarizers.text_rank import TextRankSummarizer
 from sumy.summarizers.lsa import LsaSummarizer
 
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+nltk.download('stopwords')
+
 from transformers import T5Tokenizer
 
 class SentenceLevelStrategy:
@@ -27,6 +32,11 @@ class SentenceLevelStrategy:
             
         elif "lsa" in method:
             source_text_short = self._get_lsa(self.source_text, self.source_ids, self.max_source_len)
+        
+        elif "stopwords" in method:
+            source_text_short, n_stopwords = self._get_stopwords_removed(self.source_text)
+            return source_text_short, n_stopwords
+        
         else:
             pass 
         
@@ -77,3 +87,23 @@ class SentenceLevelStrategy:
 #         print("TOKEN COUNT: ", token_count)
         idx = torch.argmin(token_count % self.max_source_len)
         return sum_candidates[idx]
+
+    def _get_stopwords_removed(self, source_text):
+#         stop_words = set(stopwords.words('english'))
+        stop_words = list(set(stopwords.words('english')))
+#         print("STOP WORD: ",len(stop_words))
+        negations = ["wouldn't", "hasn", 'not', "shan't", "didn't", "couldn't", 'aren',  'didn',"mustn't", "couldn", "don", "isn't",
+                     'mightn',   'mustn', "shouldn't", 'wasn',"shan", 'weren', "nor", 'needn', "hadn't", "wasn't", "shouldn", "won't", 
+                     "doesn't","won", "isn", "doesn", "hasn't", "weren't","needn't",  "haven't", "no", "mightn't", "wouldn", "aren't", "don't"]
+#         print("NEG WORD: ",len(negations))
+        for neg in negations:
+            stop_words.remove(neg)
+#         print("STOP WORD NEG RM: ",len(stop_words))   
+        word_tokens = word_tokenize(source_text)
+        filtered_sentence = [w for w in word_tokens if not w.lower() in stop_words]
+        n_stopwords = len(word_tokens) - len(filtered_sentence)
+#         print("REMOVED: ", len(word_tokens) - len(filtered_sentence))
+        filtered_sentence = " ".join(filtered_sentence)
+        return filtered_sentence, n_stopwords
+    
+    

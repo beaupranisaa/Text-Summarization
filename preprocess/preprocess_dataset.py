@@ -91,6 +91,18 @@ class Dataset(Dataset):
         source_ids = source["input_ids"].squeeze()
     
         strategy = SentenceLevelStrategy(self.source_text[index], source_ids, source_len, self.max_source_len)
+        if "stopwords" in self.method:
+            source_text_short, n_stopwords = strategy.shorten(self.method)
+            return {
+            "source_text": source_text,
+            "shortened_source_text": source_text_short,
+            "target_text": target_text,
+            "source_len": len(source_len["input_ids"].squeeze()),
+            "ids": ids,
+            "n_stopwords" : n_stopwords,
+            }
+    
+        
         source_text_short = strategy.shorten(self.method)
 
         return {

@@ -43,13 +43,13 @@ class Dataset(Dataset):
             self.target_text = self.data[target_text]
             self.ids = self.data['id']
         
-        elif self.method in ["luhn", "lsa", "textrank"]:
+        elif self.method in ["luhn", "lsa", "textrank", "stopwords"]:
             self.orig_text = self.data["Document"]
             self.source_text = self.data["Shortened Document"]
             self.target_text = list(self.data["Summary"])
             self.ids = list(self.data['Sample ids'])
         else:
-            pass
+            raise ValueError("Undefined shortening methods in dataset class...")
         
         if "t5" in model_name:
             self.source_text = self.add_prefix(self.source_text)
