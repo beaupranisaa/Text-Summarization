@@ -11,9 +11,12 @@ start_time = time.time()
 
 
 paths = [
-         f"""model/{model_params["MODEL"]}_{data}_lsa_25_50epochs/""",       
-         f"""model/{model_params["MODEL"]}_{data}_lsa_35_50epochs/""",
-         f"""model/{model_params["MODEL"]}_{data}_lsa_45_50epochs/""",
+#          f"""model/{model_params["MODEL"]}_{data}_stopwords_neg_head+tail_ratio0.5_25_50epochs/""",   
+#          f"""model/{model_params["MODEL"]}_{data}_stopwords_neg_head+tail_ratio0.5_35_50epochs/""",
+#          f"""model/{model_params["MODEL"]}_{data}_stopwords_neg_head+tail_ratio0.5_45_50epochs/""",
+         f"""model/{model_params["MODEL"]}_{data}_combo_stopwords_neg_head+tail_ratio0.2_25_50epochs/""",
+         f"""model/{model_params["MODEL"]}_{data}_combo_stopwords_neg_head+tail_ratio0.2_35_50epochs/""",
+         f"""model/{model_params["MODEL"]}_{data}_combo_stopwords_neg_head+tail_ratio0.2_45_50epochs/""",  
 ]
 
 for path in paths:

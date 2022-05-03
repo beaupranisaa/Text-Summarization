@@ -13,32 +13,44 @@ class Strategy:
         self.source_text = source_text
         self.source_ids = source_ids
         self.source_mask = source_mask
-        self.source_len = len(source_len["input_ids"].squeeze())
+        self.source_len = source_len
         self.end_eos = int(torch.where(self.source_ids == 1)[0])
         self.max_source_len = max_source_len
     
     def shorten(self, method):
-        if "full-text" in method:
-            source_ids, source_ids_short, source_mask = self._get_fulltext(self.source_ids, self.source_mask, self.source_len)
-        elif "head-only" in method:
-            source_ids, source_ids_short, source_mask = self._get_head(self.source_ids, self.source_mask, self.max_source_len)         
-        elif "tail-only" in method:
-            source_ids, source_ids_short, source_mask = self._get_tail(self.source_ids, self.source_mask, self.end_eos, self.max_source_len)
-        elif "head+tail" in method:
-            head_ratio = float(re.findall(r"\d*\.\d", method)[0])
-            source_ids, source_ids_short, source_mask = self._get_headtail(self.source_ids, self.source_mask, self.end_eos, self.max_source_len, head_ratio)
-        elif "luhn" in method:
-            source_ids, source_ids_short, source_mask = self._get_head(self.source_ids, self.source_mask, self.max_source_len)      
-        elif "textrank" in method:
-            source_ids, source_ids_short, source_mask = self._get_head(self.source_ids, self.source_mask, self.max_source_len) 
-        elif "lsa" in method:
-            source_ids, source_ids_short, source_mask = self._get_head(self.source_ids, self.source_mask, self.max_source_len) 
-        elif "stopwords" in method:
-            source_ids, source_ids_short, source_mask = self._get_fulltext(self.source_ids, self.source_mask, self.source_len)
-            
+        if 'combo' in method:
+            if "stopwords" in method and "head+tail" in method:
+                head_ratio = float(re.findall(r"\d*\.\d", method)[0])
+                source_ids, source_ids_short, source_mask = self._get_headtail(self.source_ids, self.source_mask, self.end_eos, self.max_source_len, head_ratio)
+            elif "stopwords" in method and "luhn" in method or "textrank" in method:
+                source_ids, source_ids_short, source_mask = self._get_head(self.source_ids, self.source_mask, self.max_source_len) 
+            else: 
+                raise ValueError("Undefined shortening combo strategy...") 
         else:
-            raise ValueError("Undefined shortening strategy...") 
-        
+            if "full-text" in method:
+                source_ids, source_ids_short, source_mask = self._get_fulltext(self.source_ids, self.source_mask, self.source_len)
+            elif "head-only" in method:
+                source_ids, source_ids_short, source_mask = self._get_head(self.source_ids, self.source_mask, self.max_source_len)         
+            elif "tail-only" in method:
+                source_ids, source_ids_short, source_mask = self._get_tail(self.source_ids, self.source_mask, self.end_eos, self.max_source_len)
+            elif "head+tail" in method:
+                head_ratio = float(re.findall(r"\d*\.\d", method)[0])
+                source_ids, source_ids_short, source_mask = self._get_headtail(self.source_ids, self.source_mask, self.end_eos, self.max_source_len, head_ratio)
+            elif "luhn" in method:
+                source_ids, source_ids_short, source_mask = self._get_head(self.source_ids, self.source_mask, self.max_source_len)      
+            elif "textrank" in method:
+                source_ids, source_ids_short, source_mask = self._get_head(self.source_ids, self.source_mask, self.max_source_len) 
+            elif "lsa" in method:
+                source_ids, source_ids_short, source_mask = self._get_head(self.source_ids, self.source_mask, self.max_source_len) 
+            # force to get stop and then head+tail
+            elif "stopwords" in method:
+                source_ids, source_ids_short, source_mask = self._get_fulltext(self.source_ids, self.source_mask, self.source_len)
+#                 head_ratio = float('0.5')
+#                 source_ids, source_ids_short, source_mask = self._get_headtail(self.source_ids, self.source_mask, self.end_eos, self.max_source_len, head_ratio)
+
+            else:
+                raise ValueError("Undefined shortening strategy...") 
+
         return source_ids, source_ids_short, source_mask
         
     def _get_fulltext(self, source_ids, source_mask, source_len):

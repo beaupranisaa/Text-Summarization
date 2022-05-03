@@ -9,7 +9,7 @@ from transformers import T5Tokenizer
 def checker(model_params):
     assert model_params["SHORTENING QUANTITY"] in [0, 25, 35, 45, 'all', 'neg']
     assert model_params["MAX_SOURCE_TEXT_LENGTH"] in [512, 373, 323, 273, '-']
-    assert model_params["METHOD"] in ["luhn", "textrank", "lsa", "stopwords", "stopwords_neg"]
+    assert model_params["METHOD"] in ["luhn", "textrank", "lsa", "stopwords", "tfidf"]
 
     if model_params["SHORTENING QUANTITY"] == 25:
         assert model_params["MAX_SOURCE_TEXT_LENGTH"] == 373

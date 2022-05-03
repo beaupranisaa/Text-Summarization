@@ -43,7 +43,7 @@ class Dataset(Dataset):
             self.target_text = self.data[target_text]
             self.ids = self.data['id']
         
-        elif self.method in ["luhn", "lsa", "textrank", "stopwords"]:
+        elif self.method in ["luhn", "lsa", "textrank"] or "stopwords" in self.method:
             self.orig_text = self.data["Document"]
             self.source_text = self.data["Shortened Document"]
             self.target_text = list(self.data["Summary"])
@@ -93,36 +93,39 @@ class Dataset(Dataset):
             padding="max_length",
             return_tensors="pt",
         )
-        source_len = self.tokenizer.batch_encode_plus(
-            [source_text],
-            return_tensors="pt",
-        )
+#         source_len = self.tokenizer.batch_encode_plus(
+#             [source_text],
+#             return_tensors="pt",
+#         )
         
-        target_len = self.tokenizer.batch_encode_plus(
-            [target_text],
-            return_tensors="pt",
-        )
+#         target_len = self.tokenizer.batch_encode_plus(
+#             [target_text],
+#             return_tensors="pt",
+#         )
         
         source_ids = source["input_ids"].squeeze()
         source_mask = source["attention_mask"].squeeze()
+        source_len = torch.count_nonzero(source_ids.to(dtype=torch.long))
         target_ids = target["input_ids"].squeeze()
-        target_mask = target["attention_mask"].squeeze()        
+        target_mask = target["attention_mask"].squeeze()
+        target_len = torch.count_nonzero(target_ids.to(dtype=torch.long))
 
         strategy = Strategy(self.source_text[index], source_ids, source_mask, source_len, self.max_source_len)
         source_ids, source_ids_short, source_mask  = strategy.shorten(self.method)
-        
-        source_ids_short = self.tokenizer.decode(source_ids_short)
 
+        source_short = self.tokenizer.decode(source_ids_short)
+        
         return {
             "source_text": source_text,
-            "shortened_source_text": source_ids_short,
+            "shortened_source_text": source_short,
             "source_ids": source_ids.to(dtype=torch.long),
             "source_mask": source_mask.to(dtype=torch.long),
-            "source_len": len(source_len["input_ids"].squeeze()),
+            "source_len": source_len,
+            "shortened_source_len": torch.count_nonzero(source_ids_short.to(dtype=torch.long)),
             "target_text": target_text,
             "target_ids": target_ids.to(dtype=torch.long),
             "target_ids_y": target_ids.to(dtype=torch.long),
-            "target_len": len(target_len["input_ids"].squeeze()),
+            "target_len": target_len,
             "ids": ids,
         }
     

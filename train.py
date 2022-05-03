@@ -45,12 +45,11 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler, model_p
     model.train()
     losses = 0
     for _, data in enumerate(loader, 0):
-        if model_params["METHOD"] in ["full-text", "head-only", "tail-only",]+["head+tail_ratio{:.1f}".format(i) for i in np.arange(0.0, 1.0, 0.1)]:
+        if model_params["METHOD"] in ["full-text", "head-only", "tail-only"]+["head+tail_ratio{:.1f}".format(i) for i in np.arange(0.0, 1.0, 0.1)]:
             len_check1 = data["source_len"] <= 512 
             len_check2 = data["source_len"] >= 485
             len_check3 = data["target_len"] <= 36
             len_check = len_check1 & len_check2 & len_check3
-    #         len_check.sum()
             if model_params["RESTRICTION"] == True:
                 if len_check.sum() < len(data["source_len"]):
                     print("SOSSSSSS")
@@ -59,6 +58,8 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler, model_p
         lm_labels = y[:, 1:].clone().detach()
         lm_labels[y[:, 1:] == tokenizer.pad_token_id] = -100
         ids = data["source_ids"].to(device, dtype=torch.long)
+#         print(torch.count_nonzero(ids, axis = 1))
+#         print(data['shortened_source_text'])
 #         print("SHAPE IDS: ", ids.shape)
 #         print("SHAPE y: ", y.shape)
         mask = data["source_mask"].to(device, dtype=torch.long)
@@ -97,7 +98,7 @@ def validate(epoch, tokenizer, model, device, loader):
     """
     model.eval()
 #     losses = 0
-    results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Reference summary": [], "Generated summary": [], "Document length": [], "Reference length": [], "Generated length": [] } 
+    results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Reference summary": [], "Generated summary": [], "Document length": [], "Shortened document length": [], "Reference length": [], "Generated length": [] } 
     with torch.no_grad():
         for _, data in enumerate(loader, 0):
             y = data['target_ids'].to(device, dtype = torch.long)
@@ -128,6 +129,7 @@ def validate(epoch, tokenizer, model, device, loader):
             results['Reference summary'].extend(target)
             results['Generated summary'].extend(preds)
             results['Document length'].extend(data['source_len'].tolist())
+            results['Shortened document length'].extend(data['shortened_source_len'].tolist())
             results['Reference length'].extend(data['target_len'].tolist())
             results['Generated length'].extend(preds_len)
 
@@ -210,12 +212,12 @@ def Trainer(
             print("LEN RESTRICTION")
             # less than n input tokens
 
-            traincond1 = df_train["doc len"] >= 485
-            traincond2 = df_train["doc len"] <= 512
+            traincond1 = df_train["doc len"] >= 972 # 485
+            traincond2 = df_train["doc len"] <= 1024 #512
             traincond3 = df_train["sum len"] <= 36
 
-            testcond1 = df_test["doc len"] >= 485
-            testcond2 = df_test["doc len"] <= 512
+            testcond1 = df_test["doc len"] >= 972 # 485
+            testcond2 = df_test["doc len"] <= 1024 #512
             testcond3 = df_test["sum len"] <= 36
 
             index_train = df_train['index'][traincond1 & traincond2 & traincond3]
@@ -239,14 +241,25 @@ def Trainer(
         train_dataset_ = train_dataset[index_train]
         test_dataset_ = test_dataset[index_test]
 
-    elif model_params["METHOD"] in ["luhn", "lsa", "textrank", "stopwords"]:
+    elif model_params["METHOD"] in ["luhn", "lsa", "textrank"]:
         train_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/{model_params["METHOD"]}/quantity_{model_params["SHORTENING QUANTITY"]}/train_set.csv""")
         test_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/{model_params["METHOD"]}/quantity_{model_params["SHORTENING QUANTITY"]}/test_set.csv""")
-        
-        
+    elif "stopwords" in model_params["METHOD"] and "neg" in model_params["METHOD"]:
+        train_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/stopwords/quantity_neg/train_set.csv""")
+        test_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/stopwords/quantity_neg/test_set.csv""")
+    elif "stopwords" in model_params["METHOD"] and "all" in model_params["METHOD"]:
+        train_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/stopwords/quantity_all/train_set.csv""")
+        test_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/stopwords/quantity_all/test_set.csv""")
+    elif "stopwords" in model_params["METHOD"] and "neg" in model_params["METHOD"] and "luhn" in model_params["METHOD"]:
+        train_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/combo_stopwords_neg_luhn/quantity_{model_params["SHORTENING QUANTITY"]}/train_set.csv""")
+        test_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/combo_stopwords_neg_luhn/quantity_{model_params["SHORTENING QUANTITY"]}/test_set.csv""")        
+    elif "stopwords" in model_params["METHOD"] and "neg" in model_params["METHOD"] and "textrank" in model_params["METHOD"]:
+        train_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/combo_stopwords_neg_textrank/quantity_{model_params["SHORTENING QUANTITY"]}/train_set.csv""")
+        test_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/combo_stopwords_neg_textrank/quantity_{model_params["SHORTENING QUANTITY"]}/test_set.csv""")
     else:
         raise ValueError("Undefined method")
-
+        
+    print(f"""GOT {model_params["METHOD"]} PREPROCESSED TEXT""")
     # Creating the Training and Validation dataset for further creation of Dataloader
     training_set = Dataset(
         train_dataset_,

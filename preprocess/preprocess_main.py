@@ -1,6 +1,6 @@
 # Importing libraries
 import sys         
-sys.path.append('/home/pranisaa/working_dir/Text-sum-test')
+sys.path.append('/home/pranisaa/working_dir/Text-Summarization')
 
 import os
 import numpy as np
@@ -86,12 +86,12 @@ def preparedata(data, params):
         print("LEN RESTRICTION")
         # less than n input tokens
 
-        traincond1 = df_train["doc len"] >= 485
-        traincond2 = df_train["doc len"] <= 512
+        traincond1 = df_train["doc len"] >= 972 #485
+        traincond2 = df_train["doc len"] <= 1024 #512
         traincond3 = df_train["sum len"] <= 36
 
-        testcond1 = df_test["doc len"] >= 485
-        testcond2 = df_test["doc len"] <= 512
+        testcond1 = df_test["doc len"] >= 972 #485
+        testcond2 = df_test["doc len"] <= 1024 #512
         testcond3 = df_test["sum len"] <= 36
 
         index_train = df_train['index'][traincond1 & traincond2 & traincond3]
@@ -166,7 +166,7 @@ def preparedata(data, params):
 # results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Summary": [], "Document length": [] } 
 
 def process(loader, params, mode):
-    if params["METHOD"] == "stopwords":
+    if params["METHOD"]in ["stopwords", "tfidf"]:
         results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Summary": [], "Document length": [] , "Removed words": []} 
     else:
         results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Summary": [], "Document length": [] } 

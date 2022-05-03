@@ -7,7 +7,7 @@ from tokenizers import decoders
 import re
 import sys   
 from preprocess_strategy import *
-sys.path.append('/home/pranisaa/working_dir/Text-sum-test')
+sys.path.append('/home/pranisaa/working_dir/Text-Summarization')
 
 from config import *
 import numpy as np
@@ -25,7 +25,7 @@ class Dataset(Dataset):
     """
 
     def __init__(
-        self, dataframe, tokenizer, model_name, max_source_len, target_len, source_text, target_text, method = "luhn",
+        self, dataframe, tokenizer, model_name, max_source_len, target_len, source_text, target_text, method = "luhn", mode = None, 
     ):
         """
         Initializes a Dataset class
@@ -46,6 +46,7 @@ class Dataset(Dataset):
         self.mask = mask
         self.to_mask_list = to_mask_list
         self.method = method
+        self.mode = mode
         self.source_text = self.data[source_text]
         if "t5" in model_name:
             self.source_text = self.add_prefix(self.source_text)
@@ -90,9 +91,11 @@ class Dataset(Dataset):
         
         source_ids = source["input_ids"].squeeze()
     
-        strategy = SentenceLevelStrategy(self.source_text[index], source_ids, source_len, self.max_source_len)
+        strategy = SentenceLevelStrategy(self.source_text[index], source_ids, source_len, self.max_source_len, self.mode)
+        
         if "stopwords" in self.method:
             source_text_short, n_stopwords = strategy.shorten(self.method)
+            
             return {
             "source_text": source_text,
             "shortened_source_text": source_text_short,
@@ -103,13 +106,14 @@ class Dataset(Dataset):
             }
     
         
-        source_text_short = strategy.shorten(self.method)
+        source_text_short, source_text_short_len = strategy.shorten(self.method)
 
         return {
             "source_text": source_text,
             "shortened_source_text": source_text_short,
             "target_text": target_text,
             "source_len": len(source_len["input_ids"].squeeze()),
+            "source_text_short_len": source_text_short_len,
             "ids": ids,
         }
     

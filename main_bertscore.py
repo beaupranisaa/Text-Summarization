@@ -8,12 +8,8 @@ import time
 start_time = time.time()
 
 paths = [
-         f"""model/{model_params["MODEL"]}_{data}_lsa_25_50epochs/""",       
-         f"""model/{model_params["MODEL"]}_{data}_lsa_35_50epochs/""",
-         f"""model/{model_params["MODEL"]}_{data}_lsa_45_50epochs/""",
-         f"""model/{model_params["MODEL"]}_{data}_textrank_25_50epochs/""",       
-         f"""model/{model_params["MODEL"]}_{data}_textrank_35_50epochs/""",
-         f"""model/{model_params["MODEL"]}_{data}_textrank_45_50epochs/""",
+         f"""model/{model_params["MODEL"]}_{data}_stopwords_all_50epochs/""",       
+         f"""model/{model_params["MODEL"]}_{data}_stopwords_neg_50epochs/""",
 ]
 
 
