@@ -42,6 +42,8 @@ class Strategy:
                 source_ids, source_ids_short, source_mask = self._get_head(self.source_ids, self.source_mask, self.max_source_len) 
             elif "lsa" in method:
                 source_ids, source_ids_short, source_mask = self._get_head(self.source_ids, self.source_mask, self.max_source_len) 
+            elif "bertbased" in method:
+                source_ids, source_ids_short, source_mask = self._get_head(self.source_ids, self.source_mask, self.max_source_len) 
             # force to get stop and then head+tail
             elif "stopwords" in method:
                 source_ids, source_ids_short, source_mask = self._get_fulltext(self.source_ids, self.source_mask, self.source_len)

@@ -48,17 +48,44 @@ def checker(model_params):
 #     else:
     pass
 
+# def get_last_checkpoint(path):
+#     if not os.path.exists(path):
+#         raise ValueError("No checkpoints to resume, please start training to create checkpoints...")
+#     else:
+#         content = os.listdir(path)
+#         checkpoints = [path for path in content]
+#         last_checkpoints = max([int(re.findall(r"\d*\d", cp)[0]) for cp in checkpoints if len(re.findall(r"\d*\d", cp)) != 0])   
+        
+#         if last_checkpoints == 0:
+#             raise ValueError("No checkpoints to resume, please start training to create checkpoints...")
+#         else:
+#             if len(os.listdir(os.path.join(checkpoints, f"""epoch{last_checkpoints}"""))) < len(os.listdir(os.path.join(checkpoints, f"""epoch{last_checkpoints-1}"""))):
+#                 return os.path.join(path, f"epoch{last_checkpoints-1}"), last_checkpoints-1
+#             return os.path.join(path, f"epoch{last_checkpoints}"), last_checkpoints
+
+# def get_best_checkpoint(path):
+#     if not os.path.exists(path):
+#         raise ValueError("No checkpoints to resume, please start training to create checkpoints...")
+#     else:
+#         content = os.listdir(path)
+#         checkpoints = [path for path in content]
+#         best_checkpoint = max([int(re.findall(r"\d*\d", cp)[0]) for cp in checkpoints if len(re.findall(r"\d*\d", cp)) != 0])   
+#         return os.path.join(path, f"epoch{best_checkpoint}")
+
 def get_last_checkpoint(path):
     if not os.path.exists(path):
         raise ValueError("No checkpoints to resume, please start training to create checkpoints...")
     else:
         content = os.listdir(path)
-        checkpoints = [path for path in content]
-        last_checkpoints = max([int(re.findall(r"\d*\d", cp)[0]) for cp in checkpoints if len(re.findall(r"\d*\d", cp)) != 0])   
-        
-        if last_checkpoints == 0:
+        if len(content) != 8:
             raise ValueError("No checkpoints to resume, please start training to create checkpoints...")
-        else:
-            if len(checkpoints) == 0:
-                return
-            return os.path.join(path, f"epoch{last_checkpoints-1}"), last_checkpoints-1
+        last_checkpoint = int(np.load(f"{path}/current_epoch.npy"))
+        print(f"[Resuming....] at EPOCH {last_checkpoint}")
+        return last_checkpoint + 1      
+      
+# def get_best_checkpoint(path):
+#     if not os.path.exists(path):
+#         raise ValueError("No best checkpoint to obtain ...")
+#     else:
+#         best_checkpoint = int(np.load(f"{path}/best_epoch.npy"))
+#         return best_checkpoint

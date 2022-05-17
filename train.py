@@ -21,6 +21,8 @@ from transformers import PegasusTokenizer, PegasusForConditionalGeneration, T5To
 
 import nltk
 
+# from torch.utils.tensorboard import SummaryWriter
+
 from dataset import Dataset
 
 console = Console(record=True)
@@ -38,7 +40,7 @@ training_logger = Table(
 def train(epoch, tokenizer, model, device, loader, optimizer, scheduler, model_params):
     
     """
-    Function to be called for training with the parameters passed from main function
+    Function to be called for training with the parameters passed from trainer function
 
     """
 
@@ -73,8 +75,6 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler, model_p
         loss = outputs[0]
         if _ % 1000 == 0:
             print("STEP: ", _,"/",len(loader))
-    # #             print("TRAINNNNNNN")
-    # #             print(epoch)
             training_logger.add_row(str(epoch), str(f'{_}/{len(loader)}'), str(loss))
             console.print(training_logger)
             clear_output(wait=True)
@@ -84,10 +84,8 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler, model_p
         optimizer.step()
         losses += loss.detach()
 
-#         del _, data, y, y_ids, lm_labels, ids, mask, outputs, loss
     scheduler.step()
     losses = losses/len(loader)
-#     del loader 
     return losses
 
 def validate(epoch, tokenizer, model, device, loader):
@@ -97,7 +95,6 @@ def validate(epoch, tokenizer, model, device, loader):
 
     """
     model.eval()
-#     losses = 0
     results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Reference summary": [], "Generated summary": [], "Document length": [], "Shortened document length": [], "Reference length": [], "Generated length": [] } 
     with torch.no_grad():
         for _, data in enumerate(loader, 0):
@@ -133,7 +130,6 @@ def validate(epoch, tokenizer, model, device, loader):
             results['Reference length'].extend(data['target_len'].tolist())
             results['Generated length'].extend(preds_len)
 
-    del loader
     return results
 
 def Trainer(
@@ -141,12 +137,9 @@ def Trainer(
 ):
 
     """
-    trainer
+    trainer funcation defines Tokenizer, creates Dataset, Dataloaders according to the shortening strategy
 
     """
-    
-#     losses = []
-#     losses_val = []
     # Set random seeds and deterministic pytorch for reproducibility
     torch.manual_seed(model_params["SEED"])  # pytorch random seed
     np.random.seed(model_params["SEED"])  # numpy random seed
@@ -176,7 +169,6 @@ def Trainer(
 
     if isinstance(model_params["RESUME_FROM_CHECKPOINTS"], bool) and model_params["RESUME_FROM_CHECKPOINTS"]:
         resume_checkpoint_path,resumed_epoch  = get_last_checkpoint(os.path.join(output_dir, f"""checkpoints"""))
-#         print(f"""[Model, Tokenizer]: Resuming at epoch{resumed_epoch}...\n""")
         model.load_state_dict(torch.load(os.path.join(resume_checkpoint_path, 'pytorch_model.bin'), map_location="cpu")) 
         tokenizer.from_pretrained(resume_checkpoint_path)
         model_params["START_TRAIN_EPOCHS"] = resumed_epoch
@@ -193,7 +185,7 @@ def Trainer(
     
     if model_params["METHOD"] in ["full-text", "head-only", "tail-only",]+["head+tail_ratio{:.1f}".format(i) for i in np.arange(0.0, 1.0, 0.1)]:
 
-        # Creation of Dataset and Dataloader
+        # Creation of Dataset and Dataloader for full-text, head-only, tail-only and head+tail truncation
         train_dataset = dataset["train"]
         val_dataset = dataset["validation"]
         test_dataset = dataset["test"]
@@ -230,34 +222,19 @@ def Trainer(
             index_train = df_train['index']
             index_test = df_test['index']
 
-        # Shuffle and take only 1000 samples
+        # Shuffle
         index_train = np.random.permutation(index_train)
         index_test = np.random.permutation(index_test)
-    #     print(index_train)
 
         console.print(f"Filtered TRAIN Dataset: {len(train_dataset[index_train]['id'])}")
         console.print(f"Filtered TEST Dataset: {len(test_dataset[index_test]['id'])}\n")
         
         train_dataset_ = train_dataset[index_train]
         test_dataset_ = test_dataset[index_test]
-
-    elif model_params["METHOD"] in ["luhn", "lsa", "textrank"]:
-        train_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/{model_params["METHOD"]}/quantity_{model_params["SHORTENING QUANTITY"]}/train_set.csv""")
-        test_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/{model_params["METHOD"]}/quantity_{model_params["SHORTENING QUANTITY"]}/test_set.csv""")
-    elif "stopwords" in model_params["METHOD"] and "neg" in model_params["METHOD"]:
-        train_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/stopwords/quantity_neg/train_set.csv""")
-        test_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/stopwords/quantity_neg/test_set.csv""")
-    elif "stopwords" in model_params["METHOD"] and "all" in model_params["METHOD"]:
-        train_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/stopwords/quantity_all/train_set.csv""")
-        test_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/stopwords/quantity_all/test_set.csv""")
-    elif "stopwords" in model_params["METHOD"] and "neg" in model_params["METHOD"] and "luhn" in model_params["METHOD"]:
-        train_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/combo_stopwords_neg_luhn/quantity_{model_params["SHORTENING QUANTITY"]}/train_set.csv""")
-        test_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/combo_stopwords_neg_luhn/quantity_{model_params["SHORTENING QUANTITY"]}/test_set.csv""")        
-    elif "stopwords" in model_params["METHOD"] and "neg" in model_params["METHOD"] and "textrank" in model_params["METHOD"]:
-        train_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/combo_stopwords_neg_textrank/quantity_{model_params["SHORTENING QUANTITY"]}/train_set.csv""")
-        test_dataset_ = pd.read_csv(f"""preprocess/preprocessed_text/combo_stopwords_neg_textrank/quantity_{model_params["SHORTENING QUANTITY"]}/test_set.csv""")
     else:
-        raise ValueError("Undefined method")
+        # Creation of Dataset and Dataloader for preprocessed text e.g. luhn, lsa textrank....
+        train_dataset_ = pd.read_csv(os.path.join(model_params["PATH"], f"""train_set.csv"""))
+        test_dataset_ = pd.read_csv(os.path.join(model_params["PATH"], f"""test_set.csv"""))
         
     print(f"""GOT {model_params["METHOD"]} PREPROCESSED TEXT""")
     # Creating the Training and Validation dataset for further creation of Dataloader
@@ -270,8 +247,6 @@ def Trainer(
         source_text,
         target_text,
         model_params["METHOD"],
-        mask = mask,
-        to_mask_list = to_mask_list,
     )
     test_set = Dataset(
         test_dataset_,
@@ -284,8 +259,6 @@ def Trainer(
         model_params["METHOD"]
     )
 
-#     del train_dataset, test_dataset
-    
     # Defining the parameters for creation of dataloaders
     train_params = {
         "batch_size": model_params["TRAIN_BATCH_SIZE"],
@@ -336,9 +309,6 @@ def Trainer(
             os.makedirs(os.path.join(output_dir, f"""result_eval"""))
             os.makedirs(os.path.join(output_dir, f"""checkpoints"""))
 
-        
-#         final_df = pd.DataFrame({"ids": ids, "Document": documents, "Generated Text": predictions, "Actual Text": actuals, "Document length": document_lens, "Actual length": actuals_lens })
-        
         final_df = pd.DataFrame(results)
         final_df.to_csv(os.path.join(output_dir, f"""result_gen/predictions_{model_params['MODEL']}_epoch{epoch}.csv"""))
         final_df.to_csv(os.path.join(output_dir, f"""result_eval/predictions_{model_params['MODEL']}_epoch{epoch}.csv"""))

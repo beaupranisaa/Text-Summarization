@@ -7,7 +7,8 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader, RandomSampler, SequentialSampler
 import os
 import pickle
-from train import Trainer
+# from train import Trainer
+from train_test import Trainer
 from utils import checker
 from torch import cuda
 import os

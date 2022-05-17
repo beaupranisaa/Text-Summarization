@@ -48,8 +48,6 @@ class Dataset(Dataset):
         self.method = method
         self.mode = mode
         self.source_text = self.data[source_text]
-        if "t5" in model_name:
-            self.source_text = self.add_prefix(self.source_text)
         self.target_text = self.data[target_text]
         
         self.ids = self.data['id']
@@ -64,6 +62,7 @@ class Dataset(Dataset):
         
         ids = self.ids[index]
         source_text = str(self.source_text[index])
+#         print(source_text)
         target_text = str(self.target_text[index])
         
         # cleaning data so as to ensure data is in string type
@@ -83,42 +82,19 @@ class Dataset(Dataset):
             return_tensors="pt",
         )
         
-        source_len = self.tokenizer.batch_encode_plus(
-            [source_text],
-            return_tensors="pt",
-        )
-        
-        
         source_ids = source["input_ids"].squeeze()
-    
-        strategy = SentenceLevelStrategy(self.source_text[index], source_ids, source_len, self.max_source_len, self.mode)
+        source_len = torch.count_nonzero(source_ids.to(dtype=torch.long))
         
-        if "stopwords" in self.method:
-            source_text_short, n_stopwords = strategy.shorten(self.method)
-            
-            return {
-            "source_text": source_text,
-            "shortened_source_text": source_text_short,
-            "target_text": target_text,
-            "source_len": len(source_len["input_ids"].squeeze()),
-            "ids": ids,
-            "n_stopwords" : n_stopwords,
-            }
-    
+        strategy = SentenceLevelStrategy(self.source_text[index], source_ids, source_len, self.max_source_len, self.mode)
         
         source_text_short, source_text_short_len = strategy.shorten(self.method)
 
         return {
+            "ids": ids,
             "source_text": source_text,
             "shortened_source_text": source_text_short,
             "target_text": target_text,
-            "source_len": len(source_len["input_ids"].squeeze()),
+            "source_len": source_len,
             "source_text_short_len": source_text_short_len,
-            "ids": ids,
         }
-    
-    def add_prefix(self, examples):
-        prefix = "summarize: "
-        inputs = [prefix + doc for doc in examples]
-        return inputs
     

@@ -17,7 +17,7 @@ class Dataset(Dataset):
     """
 
     def __init__(
-        self, dataframe, tokenizer, model_name, max_source_len, target_len, source_text, target_text, method = "full-text", to_mask_list = None,  mask = False, 
+        self, dataframe, tokenizer, model_name, max_source_len, target_len, source_text, target_text, method = "full-text"
     ):
         """
         Initializes a Dataset class
@@ -35,25 +35,21 @@ class Dataset(Dataset):
         self.data = dataframe
         self.max_source_len = max_source_len
         self.summ_len = target_len
-        self.mask = mask
-        self.to_mask_list = to_mask_list
         self.method = method
-        if self.method in ["full-text", "head-only", "tail-only",]+["head+tail_ratio{:.1f}".format(i) for i in np.arange(0.0, 1.0, 0.1)]:
-            self.source_text = self.data[source_text]
-            self.target_text = self.data[target_text]
-            self.ids = self.data['id']
         
-        elif self.method in ["luhn", "lsa", "textrank"] or "stopwords" in self.method:
+        if self.method in ["full-text", "head-only", "tail-only",]+["head+tail_ratio{:.1f}".format(i) for i in np.arange(0.0, 1.0, 0.1)]:
+            self.source_text = self.data[source_text][:100]
+            self.target_text = self.data[target_text][:100]
+            self.ids = self.data['id'][:100]
+        
+        else:
             self.orig_text = self.data["Document"]
             self.source_text = self.data["Shortened Document"]
             self.target_text = list(self.data["Summary"])
             self.ids = list(self.data['Sample ids'])
-        else:
-            raise ValueError("Undefined shortening methods in dataset class...")
         
         if "t5" in model_name:
             self.source_text = self.add_prefix(self.source_text)
-        
         
 
     def __len__(self):
@@ -72,9 +68,9 @@ class Dataset(Dataset):
         source_text = " ".join(source_text.split())
         target_text = " ".join(target_text.split())
         
-        if self.mask == True:
-            source_text = [x for x in source_text.split() if x not in self.to_mask_list ]
-            source_text = " ".join(source_text)
+#         if self.mask == True:
+#             source_text = [x for x in source_text.split() if x not in self.to_mask_list ]
+#             source_text = " ".join(source_text)
 
         source = self.tokenizer.batch_encode_plus(
             [source_text],
@@ -93,15 +89,6 @@ class Dataset(Dataset):
             padding="max_length",
             return_tensors="pt",
         )
-#         source_len = self.tokenizer.batch_encode_plus(
-#             [source_text],
-#             return_tensors="pt",
-#         )
-        
-#         target_len = self.tokenizer.batch_encode_plus(
-#             [target_text],
-#             return_tensors="pt",
-#         )
         
         source_ids = source["input_ids"].squeeze()
         source_mask = source["attention_mask"].squeeze()
@@ -131,7 +118,7 @@ class Dataset(Dataset):
     
     def add_prefix(self, examples):
         prefix = "summarize: "
-        inputs = [prefix + doc for doc in examples]
+        inputs = [str(prefix) + str(doc) for doc in examples]
         return inputs
     
     def count_words(self):

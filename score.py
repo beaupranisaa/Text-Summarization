@@ -17,11 +17,9 @@ class Scores:
         
         self.model = model
         self.dataset = dataset
-        
-#         self.path_gen = f'{self.model}_{self.dataset}/outputs_{self.model}_{self.dataset}/results_gen'
-#         self.path = f'model/{self.model}_{self.dataset}/result_eval'
+
         self.path = os.path.join(path, f"result_eval")
-        print(path)
+#         print(path)
     
     def calculate(self):
         pass

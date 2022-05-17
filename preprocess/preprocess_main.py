@@ -22,174 +22,127 @@ from rich.table import Column, Table
 from rich import box
 from rich.console import Console
 from IPython.display import clear_output
+import math
 
 from transformers import T5Tokenizer
-
-console = Console(record=True)
-
-training_logger = Table(
-    Column("Epoch", justify="center"),
-    Column("Steps", justify="center"),
-    Column("Loss", justify="center"),
-    title="Training Status",
-    pad_edge=False,
-    box=box.ASCII,
-)
-
-console = Console(record=True)
-
-training_logger = Table(
-    Column("Epoch", justify="center"),
-    Column("Steps", justify="center"),
-    Column("Loss", justify="center"),
-    title="Training Status",
-    pad_edge=False,
-    box=box.ASCII,
-)
 
 os.environ['http_proxy'] = 'http://192.41.170.23:3128'
 os.environ['https_proxy'] = 'http://192.41.170.23:3128'
 
-torch.manual_seed(params["SEED"])  # pytorch random seed
-np.random.seed(params["SEED"])  # numpy random seed
-torch.backends.cudnn.deterministic = True
-
-console.log(f"[Checking configuration]...\n")
-checker(params)
-console.log(f"[Checking configuration]...PASS!\n")
-
-
-def preparedata(data, params):
-    
+def preparedata(data, config):
     if data == 'cnn_dailymail':
         dataset = load_dataset(data, '3.0.0')
-        params["SOURCE TEXT"] = "article"
-        params["TARGET TEXT"] = "highlights"
+        config['source_text'] = "article"
+        config['target_text'] = "highlights"
     elif data == "xsum":
         dataset = load_dataset(data)
-        params["SOURCE TEXT"] = "document"
-        params["TARGET TEXT"] = "summary"
+        config['source_text']  = "document"
+        config['target_text'] = "summary"
     else:
         raise ValueError("Undefined dataset")
 
-    train_dataset = dataset["train"]
-    val_dataset = dataset["validation"]
-    test_dataset = dataset["test"]
+    train_dataset, val_dataset, test_dataset = get_dataset(dataset, "train", config), get_dataset(dataset, "validation", config), get_dataset(dataset, "test", config)
+    
+    training_loader, val_loader,  test_loader = get_loader(train_dataset, config), get_loader(val_dataset, config), get_loader(test_dataset, config)
+    
+    return training_loader, val_loader,  test_loader
 
-    path_train = "../datalength/train_info.csv"
-    df_train = pd.read_csv(path_train)
+def get_dataset(dataset, mode, config):      
+    data = dataset[mode]
+    path =  f"../datalength/{mode}_info.csv"
+    df = pd.read_csv(path)
 
-    path_test = "../datalength/test_info.csv"
-    df_test = pd.read_csv(path_test)    
-
-    if params["RESTRICTION"] == True:
+    if config['max_source_length'] == None:
+        print("NO LEN RESTRICTION")
+        index = df['index']
+        
+    else:
         print("LEN RESTRICTION")
         # less than n input tokens
+        if config['orig_source_length'] == 512:
+            cond1 = df["doc len"] >= math.floor(0.95*config['orig_source_length']-1) #485, 972
+        elif config['orig_source_length'] == 1024:
+            cond1 = df["doc len"] >= math.floor(0.95*config['orig_source_length'])
+        else:
+            raise ValueError("undefined...")
+        cond2 = df["doc len"] <= config['orig_source_length'] #512, 1024
+        cond3 = df["sum len"] <= config['max_target_length']
 
-        traincond1 = df_train["doc len"] >= 972 #485
-        traincond2 = df_train["doc len"] <= 1024 #512
-        traincond3 = df_train["sum len"] <= 36
-
-        testcond1 = df_test["doc len"] >= 972 #485
-        testcond2 = df_test["doc len"] <= 1024 #512
-        testcond3 = df_test["sum len"] <= 36
-
-        index_train = df_train['index'][traincond1 & traincond2 & traincond3]
-        index_test = df_test['index'][testcond1 & testcond2 & testcond3]
-        print(len(index_train))
-        print(len(index_test))
-
-    else:
-        print("NO LEN RESTRICTION")
-        index_train = df_train['index']
-        index_test = df_test['index']
+        index = df['index'][cond1 & cond2 & cond3]
 
     # Shuffle and take only 1000 samples
-    index_train = np.random.permutation(index_train)
-    index_test = np.random.permutation(index_test)
-    #     print(index_train)
+    index = np.random.permutation(index)[3712:]
     
-    console.print(f"Filtered TRAIN Dataset: {len(train_dataset[index_train]['id'])}")
-    console.print(f"Filtered TEST Dataset: {len(test_dataset[index_test]['id'])}\n")
-
-    del dataset
-
-    tokenizer = T5Tokenizer.from_pretrained(params["MODEL"])
+    print(f"Filtered {mode} Dataset: {len(data[index]['id'])}")
+    
+    tokenizer = T5Tokenizer.from_pretrained(config['model'])
 
     # Creating the Training and Validation dataset for further creation of Dataloader
-    training_set = Dataset(
-        train_dataset[index_train],
+    data_set = Dataset(
+        data[index],
         tokenizer,
-        params["MODEL"],
-        params["MAX_SOURCE_TEXT_LENGTH"],
-        params["MAX_TARGET_TEXT_LENGTH"],
-        params["SOURCE TEXT"],
-        params["TARGET TEXT"],
-        params["METHOD"],
+        config['model'],
+        config['max_source_length'],
+        config['max_target_length'],
+        config['source_text'],
+        config['target_text'],
+        config['method'],
     )
-    test_set = Dataset(
-        test_dataset[index_test],
-        tokenizer,
-        params["MODEL"],
-        params["MAX_SOURCE_TEXT_LENGTH"],
-        params["MAX_TARGET_TEXT_LENGTH"],
-        params["SOURCE TEXT"],
-        params["TARGET TEXT"],
-        params["METHOD"]
-    )
+    
+    return data_set
 
-    del train_dataset, test_dataset
-
-    # Defining the parameters for creation of dataloaders
-    train_params = {
-        "batch_size": params["BATCH_SIZE"],
+def get_loader(dataset, config): 
+    loader_params = {
+        "batch_size": config['batch_size'],
         "shuffle": False,
         "num_workers": 0,
-    }
+    }   
+    loader = DataLoader(dataset, **loader_params)
+    
+    print(f"Loader Length: {len(loader)}")
+    return loader
 
-    test_params = {
-        "batch_size": params["BATCH_SIZE"],
-        "shuffle": False,
-        "num_workers": 0,
-    }
 
-    # Creation of Dataloaders for testing and validation. This will be used down for training and validation stage for the model.
-    training_loader = DataLoader(training_set, **train_params)
-    test_loader = DataLoader(test_set, **test_params)
-
-    print("TRAIN LOADER: ", len(training_loader))
-    print("VAL LOADER: ", len(test_loader))
-
-    del train_params, test_params   
-    return training_loader, test_loader
-
-# results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Summary": [], "Document length": [] } 
-
-def process(loader, params, mode):
-    if params["METHOD"]in ["stopwords", "tfidf"]:
-        results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Summary": [], "Document length": [] , "Removed words": []} 
-    else:
-        results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Summary": [], "Document length": [] } 
+def process(loader, config, mode):
+    results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Summary": [], "Document length": [] , "Shortened Document length": []} 
+    path = f"""preprocessed_text/{config['orig_source_length']}_{config['method']}/quantity_{config['max_source_length']}/{mode}_fix/"""
+    if not os.path.exists(path):
+        os.makedirs(path)        
     for _, data in enumerate(loader, 0):
+        _ = _ + 29
         results['Sample ids'].extend(data['ids'])
         results['Document'].extend(data['source_text'])
         results['Shortened Document'].extend(data['shortened_source_text'])
         results['Summary'].extend(data["target_text"])
         results['Document length'].extend(data['source_len'].tolist())
-        if params["METHOD"] == "stopwords":
-            results["Removed words"].extend(data['n_stopwords'].tolist())
+        results["Shortened Document length"].extend(data['source_text_short_len'].tolist())
+        
         print("STEP: ", _,"/",len(loader))
         final_df = pd.DataFrame(results)
-        if not os.path.exists(f"""preprocessed_text/{params["METHOD"]}/quantity_{params["SHORTENING QUANTITY"]}/{mode}"""):
-            os.makedirs(f"""preprocessed_text/{params["METHOD"]}/quantity_{params["SHORTENING QUANTITY"]}/{mode}""")
-        final_df.to_csv(f"""preprocessed_text/{params["METHOD"]}/quantity_{params["SHORTENING QUANTITY"]}/{mode}/{params["METHOD"]}_quantity{params["SHORTENING QUANTITY"]}_step{_}.csv""")
+        final_df.to_csv(os.path.join(path, f"""step{_}.csv"""""))   
         print("SAVE TO CSV FINISHED")
-        if params["METHOD"] == "stopwords":
-            results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Summary": [], "Document length": [] , "Removed words": []} 
-        else: results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Summary": [], "Document length": [] } 
+        results = {"Sample ids": [], "Document": [], "Shortened Document": [], "Summary": [], "Document length": [] , "Shortened Document length": []}                  
 
-if __name__ == "__main__":  
-    train_loader, test_loader = preparedata(data, params)
-    process(test_loader, params, "test_set")
-    process(train_loader, params, "train_set")
+config = dict(
+    model = "t5-small",
+    data = "xsum",    
+    batch_size = 128,
+    orig_source_length = 512,
+    max_source_length = 512, # 512, 373, 323, 273
+    max_target_length = 36,
+    method = "head-only",
+    seed = 42,
+)
+            
+if __name__ == "__main__": 
     
+    torch.manual_seed(config['seed'])  # pytorch random seed
+    np.random.seed(config['seed'])  # numpy random seed
+    torch.backends.cudnn.deterministic = True
+
+    train_loader, val_loader, test_loader = preparedata(data, config)
+    
+#     process(test_loader, config, "test_set")
+#     process(val_loader, config, "val_set")
+    process(train_loader, config, "train_set")
+     

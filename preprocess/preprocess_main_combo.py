@@ -32,8 +32,8 @@ torch.backends.cudnn.deterministic = True
 
 def preparedata(data, params):
 
-    preprocessed_data_train = pd.read_csv(f"""preprocessed_text/{params["METHOD1"]}/quantity_{params["SHORTENING QUANTITY1"]}/train_set.csv""")
-    preprocessed_data_test = pd.read_csv(f"""preprocessed_text/{params["METHOD1"]}/quantity_{params["SHORTENING QUANTITY1"]}/test_set.csv""")
+    preprocessed_data_train = pd.read_csv(os.path.join(params["PATH"], f"""quantity_{params["SHORTENING QUANTITY1"]}/train_set.csv"""))
+    preprocessed_data_test = pd.read_csv(os.path.join(params["PATH"], f"""quantity_{params["SHORTENING QUANTITY1"]}/test_set.csv"""))
     
     preprocessed_data_train.rename(columns = {'Sample ids':'id'}, inplace = True)
     preprocessed_data_test.rename(columns = {'Sample ids':'id'}, inplace = True)

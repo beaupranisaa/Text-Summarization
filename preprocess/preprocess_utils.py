@@ -7,9 +7,9 @@ from torch.utils.data import DataLoader
 from transformers import T5Tokenizer
 
 def checker(model_params):
-    assert model_params["SHORTENING QUANTITY"] in [0, 25, 35, 45, 'all', 'neg']
+    assert model_params["SHORTENING QUANTITY"] in [0, 25, 35, 45, 'all', 'neg', 512]
     assert model_params["MAX_SOURCE_TEXT_LENGTH"] in [512, 373, 323, 273, '-']
-    assert model_params["METHOD"] in ["luhn", "textrank", "lsa", "stopwords", "tfidf"]
+    assert model_params["METHOD"] in ["luhn", "textrank", "lsa", "stopwords", "tfidf", "bertbased"]
 
     if model_params["SHORTENING QUANTITY"] == 25:
         assert model_params["MAX_SOURCE_TEXT_LENGTH"] == 373
@@ -21,6 +21,8 @@ def checker(model_params):
         assert model_params["MAX_SOURCE_TEXT_LENGTH"] == '-'
     elif model_params["SHORTENING QUANTITY"] == 'neg':
         assert model_params["MAX_SOURCE_TEXT_LENGTH"] == '-'
+    elif model_params["SHORTENING QUANTITY"] == 512:
+        assert model_params["MAX_SOURCE_TEXT_LENGTH"] == 512
     else:
         pass
 

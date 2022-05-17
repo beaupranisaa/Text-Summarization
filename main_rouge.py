@@ -14,11 +14,16 @@ paths = [
 #          f"""model/{model_params["MODEL"]}_{data}_stopwords_neg_head+tail_ratio0.5_25_50epochs/""",   
 #          f"""model/{model_params["MODEL"]}_{data}_stopwords_neg_head+tail_ratio0.5_35_50epochs/""",
 #          f"""model/{model_params["MODEL"]}_{data}_stopwords_neg_head+tail_ratio0.5_45_50epochs/""",
-         f"""model/{model_params["MODEL"]}_{data}_combo_stopwords_neg_head+tail_ratio0.2_25_50epochs/""",
-         f"""model/{model_params["MODEL"]}_{data}_combo_stopwords_neg_head+tail_ratio0.2_35_50epochs/""",
-         f"""model/{model_params["MODEL"]}_{data}_combo_stopwords_neg_head+tail_ratio0.2_45_50epochs/""",  
+         f"""model/{model_params["MODEL"]}_{data}_combo_stopwords_neg_luhn_25_50epochs/""",
+         f"""model/{model_params["MODEL"]}_{data}_combo_stopwords_neg_luhn_35_50epochs/""",
+         f"""model/{model_params["MODEL"]}_{data}_combo_stopwords_neg_luhn_45_50epochs/""", 
+         f"""model/{model_params["MODEL"]}_{data}_combo_stopwords_all_luhn_25_50epochs/""",
+         f"""model/{model_params["MODEL"]}_{data}_combo_stopwords_all_luhn_35_50epochs/""",
+         f"""model/{model_params["MODEL"]}_{data}_combo_stopwords_all_luhn_45_50epochs/""",  
+         f"""model/{model_params["MODEL"]}_{data}_combo_stopwords_all_textrank_25_50epochs/""",
+         f"""model/{model_params["MODEL"]}_{data}_combo_stopwords_all_textrank_35_50epochs/""",
+         f"""model/{model_params["MODEL"]}_{data}_combo_stopwords_all_textrank_45_50epochs/""",  
 ]
-
 for path in paths:
 #     path = f"""model/{model_params["MODEL"]}_{data}_tail-only35_50epochs/"""
     print("PATH: ", path)
